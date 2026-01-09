@@ -1,7 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Zap, Wifi, Shield, ShoppingCart, Utensils, Car, Heart, Shirt, Plane, PiggyBank, Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, X, Edit3, Trash2, Briefcase, Phone, Dog, MoreHorizontal, Download, Printer, ArrowRight, Calendar, Upload, Save } from 'lucide-react';
+import { 
+  Home, Zap, Wifi, Shield, ShoppingCart, Utensils, Car, Heart, Shirt, Plane, PiggyBank, 
+  Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, 
+  X, Edit3, Trash2, Briefcase, Phone, Dog, MoreHorizontal, Download, Printer, ArrowRight, 
+  Calendar, Upload, Save,
+  Euro, DollarSign, CreditCard, Wallet, Banknote, Coins, Receipt, 
+  Gift, Baby, GraduationCap, Book, Music, Tv, Gamepad2, Camera,
+  Bus, Train, Fuel, Bike,
+  Coffee, Wine, Pizza,
+  Scissors, Sparkles, Dumbbell, Pill,
+  Building, Key, Wrench,
+  Globe, Map, Umbrella,
+  Cat, Bird, Fish,
+  Smartphone, Laptop, Monitor, Headphones,
+  ShoppingBag, Package, Watch,
+  Users, UserPlus,
+  Leaf
+} from 'lucide-react';
 
-const iconMap = { Home, Zap, Wifi, Shield, ShoppingCart, Utensils, Car, Heart, Shirt, Plane, PiggyBank, Briefcase, Phone, Dog, MoreHorizontal, TrendingUp };
+// Alle Icons - einheitlich schwarz/dunkelbraun
+const iconMap = { 
+  Euro, DollarSign, CreditCard, Wallet, Banknote, Coins, PiggyBank, TrendingUp, Receipt,
+  Home, Zap, Wifi, Key, Building, Wrench,
+  Car, Bus, Train, Fuel, Bike, Plane,
+  ShoppingCart, Utensils, Coffee, Wine, Pizza,
+  Heart, Pill, Dumbbell, Scissors, Sparkles,
+  Shirt, ShoppingBag, Package, Watch,
+  Tv, Music, Gamepad2, Camera, Book, Headphones,
+  Phone, Smartphone, Laptop, Monitor,
+  Baby, GraduationCap, Gift, Users, UserPlus,
+  Dog, Cat, Bird, Fish,
+  Globe, Map, Umbrella, Leaf,
+  Briefcase, Shield,
+  MoreHorizontal
+};
+
+// Icon-Kategorien
+const iconCategories = [
+  { name: 'Geld', icons: ['Euro', 'DollarSign', 'CreditCard', 'Wallet', 'Banknote', 'Coins', 'PiggyBank', 'TrendingUp', 'Receipt'] },
+  { name: 'Wohnen', icons: ['Home', 'Zap', 'Wifi', 'Key', 'Building', 'Wrench'] },
+  { name: 'Transport', icons: ['Car', 'Bus', 'Train', 'Fuel', 'Bike', 'Plane'] },
+  { name: 'Essen', icons: ['ShoppingCart', 'Utensils', 'Coffee', 'Wine', 'Pizza'] },
+  { name: 'Gesundheit', icons: ['Heart', 'Pill', 'Dumbbell', 'Scissors', 'Sparkles'] },
+  { name: 'Shopping', icons: ['Shirt', 'ShoppingBag', 'Package', 'Watch'] },
+  { name: 'Medien', icons: ['Tv', 'Music', 'Gamepad2', 'Camera', 'Book', 'Headphones'] },
+  { name: 'Technik', icons: ['Phone', 'Smartphone', 'Laptop', 'Monitor'] },
+  { name: 'Familie', icons: ['Baby', 'GraduationCap', 'Gift', 'Users', 'UserPlus'] },
+  { name: 'Tiere', icons: ['Dog', 'Cat', 'Bird', 'Fish'] },
+  { name: 'Sonstiges', icons: ['Briefcase', 'Shield', 'Globe', 'Map', 'Umbrella', 'Leaf', 'MoreHorizontal'] }
+];
 
 const formatCurrency = (a) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(a);
 const formatPercent = (v) => new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 1 }).format(v);
@@ -144,12 +191,16 @@ const Modal = ({ open, onClose, title, children }) => {
   );
 };
 
+// Verfügbare Icons für Auswahl - wird jetzt durch iconCategories ersetzt
+
 const EditModal = ({ open, onClose, item, onSave, type }) => {
   const [name, setName] = React.useState('');
   const [amount, setAmount] = React.useState('');
   const [target, setTarget] = React.useState('');
   const [saved, setSaved] = React.useState('');
   const [desc, setDesc] = React.useState('');
+  const [icon, setIcon] = React.useState('MoreHorizontal');
+  const [showIconPicker, setShowIconPicker] = React.useState(false);
 
   React.useEffect(() => {
     if (open && item) {
@@ -158,6 +209,8 @@ const EditModal = ({ open, onClose, item, onSave, type }) => {
       setTarget(item.target?.toString() || '0');
       setSaved(item.saved?.toString() || '0');
       setDesc(item.desc || '');
+      setIcon(item.icon || 'MoreHorizontal');
+      setShowIconPicker(false);
     }
   }, [open, item]);
 
@@ -165,6 +218,7 @@ const EditModal = ({ open, onClose, item, onSave, type }) => {
     onSave({
       ...item,
       name,
+      icon,
       amount: parseFloat(amount) || 0,
       desc,
       ...(type === 'savings' && { target: parseFloat(target) || 0, saved: parseFloat(saved) || 0 })
@@ -174,7 +228,7 @@ const EditModal = ({ open, onClose, item, onSave, type }) => {
 
   return (
     <Modal open={open} onClose={onClose} title="Bearbeiten">
-      <div style={{ padding: 20 }}>
+      <div style={{ padding: 20, maxHeight: '60vh', overflowY: 'auto' }}>
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Name</label>
           <input value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, boxSizing: 'border-box', background: '#FFFEF9' }} />
@@ -186,6 +240,68 @@ const EditModal = ({ open, onClose, item, onSave, type }) => {
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Beschreibung</label>
           <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="z.B. Verwendungszweck" style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, boxSizing: 'border-box', background: '#FFFEF9' }} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#5C4033' }}>Icon</label>
+          
+          {/* Ausgewähltes Icon + Button zum Öffnen */}
+          <button
+            type="button"
+            onClick={() => setShowIconPicker(!showIconPicker)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 14px',
+              border: '1px solid #E8E4DC',
+              borderRadius: 8,
+              background: '#FFFEF9',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            {(() => { const IconComp = iconMap[icon] || MoreHorizontal; return <IconComp size={20} color="#333" />; })()}
+            <span style={{ flex: 1, textAlign: 'left', color: '#5C4033' }}>{icon}</span>
+            <ChevronDown size={16} color="#999" style={{ transform: showIconPicker ? 'rotate(180deg)' : 'none' }} />
+          </button>
+          
+          {/* Icon-Picker mit Kategorien */}
+          {showIconPicker && (
+            <div style={{ marginTop: 8, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', maxHeight: 250, overflowY: 'auto' }}>
+              {iconCategories.map(category => (
+                <div key={category.name}>
+                  <div style={{ padding: '8px 12px', background: '#FAF8F5', fontSize: 11, fontWeight: 600, color: '#888', position: 'sticky', top: 0 }}>
+                    {category.name.toUpperCase()}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: 8 }}>
+                    {category.icons.map(iconKey => {
+                      const IconComp = iconMap[iconKey] || MoreHorizontal;
+                      return (
+                        <button
+                          key={iconKey}
+                          type="button"
+                          onClick={() => { setIcon(iconKey); setShowIconPicker(false); }}
+                          style={{
+                            padding: 8,
+                            border: icon === iconKey ? '2px solid #333' : '1px solid transparent',
+                            borderRadius: 6,
+                            background: icon === iconKey ? '#F0F0F0' : 'transparent',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          title={iconKey}
+                        >
+                          <IconComp size={18} color="#333" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         {type === 'savings' && (
           <>
