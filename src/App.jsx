@@ -692,9 +692,11 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAF8F5' }}>
-      <header style={{ background: '#FFFEF9', borderBottom: '1px solid #E8E4DC', padding: '12px 20px', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#5C4033', margin: 0, cursor: 'pointer' }} onClick={() => setEditingName(true)}>
+      <header style={{ background: '#FFFEF9', borderBottom: '1px solid #E8E4DC', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          {/* Erste Zeile: Logo + Monat + Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: '#5C4033', margin: 0, cursor: 'pointer' }} onClick={() => setEditingName(true)}>
             {editingName ? (
               <input 
                 autoFocus
@@ -702,7 +704,7 @@ export default function App() {
                 onChange={(e) => setAppName(e.target.value)}
                 onBlur={() => setEditingName(false)}
                 onKeyDown={(e) => e.key === 'Enter' && setEditingName(false)}
-                style={{ fontSize: 20, fontWeight: 700, color: '#5C4033', border: 'none', background: 'transparent', width: 120, outline: '2px solid #D2B48C', borderRadius: 4, padding: '2px 4px' }}
+                style={{ fontSize: 18, fontWeight: 700, color: '#5C4033', border: 'none', background: 'transparent', width: 100, outline: '2px solid #D2B48C', borderRadius: 4, padding: '2px 4px' }}
               />
             ) : (
               <>💰 {appName}</>
@@ -710,22 +712,24 @@ export default function App() {
           </h1>
           
           {tab === 'budget' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button onClick={prevMonth} style={{ padding: 8, border: 'none', background: 'transparent', cursor: 'pointer' }}><ChevronLeft size={20} color="#8B7355" /></button>
-              <span style={{ fontWeight: 500, minWidth: 140, textAlign: 'center', color: '#5C4033' }}>{getMonthName(currentMonth)}</span>
-              <button onClick={nextMonth} style={{ padding: 8, border: 'none', background: 'transparent', cursor: 'pointer' }}><ChevronRight size={20} color="#8B7355" /></button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button onClick={prevMonth} style={{ padding: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}><ChevronLeft size={18} color="#8B7355" /></button>
+              <span style={{ fontWeight: 500, fontSize: 14, textAlign: 'center', color: '#5C4033' }}>{getMonthName(currentMonth)}</span>
+              <button onClick={nextMonth} style={{ padding: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}><ChevronRight size={18} color="#8B7355" /></button>
             </div>
           )}
           {tab === 'year' && (
-            <span style={{ fontWeight: 500, color: '#5C4033' }}>Jahr {year}</span>
+            <span style={{ fontWeight: 500, color: '#5C4033', fontSize: 14 }}>Jahr {year}</span>
           )}
+          </div>
           
-          <div style={{ display: 'flex', gap: 8, position: 'relative' }}>
-            <button onClick={() => setTab('budget')} style={{ padding: '8px 12px', border: '1px solid #E8E4DC', borderRadius: 8, background: tab === 'budget' ? '#8B7355' : '#FFFEF9', color: tab === 'budget' ? '#FFFEF9' : '#5C4033', cursor: 'pointer', fontWeight: 500, fontSize: 13 }}>Monat</button>
-            <button onClick={() => setTab('year')} style={{ padding: '8px 12px', border: '1px solid #E8E4DC', borderRadius: 8, background: tab === 'year' ? '#8B7355' : '#FFFEF9', color: tab === 'year' ? '#FFFEF9' : '#5C4033', cursor: 'pointer', fontWeight: 500, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={14} />Jahr</button>
-            <button onClick={tab === 'year' ? exportYearCSV : exportCSV} style={{ padding: 8, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', cursor: 'pointer' }} title="CSV exportieren"><Download size={18} color="#8B7355" /></button>
-            <button onClick={handlePrint} style={{ padding: 8, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', cursor: 'pointer' }} title="Drucken"><Printer size={18} color="#8B7355" /></button>
-            <button onClick={() => setShowDataMenu(!showDataMenu)} style={{ padding: 8, border: '1px solid #E8E4DC', borderRadius: 8, background: showDataMenu ? '#8B7355' : '#FFFEF9', cursor: 'pointer' }} title="Daten verwalten"><Save size={18} color={showDataMenu ? '#FFFEF9' : '#8B7355'} /></button>
+          {/* Zweite Zeile: Tab-Buttons + Icons */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center', position: 'relative' }}>
+            <button onClick={() => setTab('budget')} style={{ padding: '6px 10px', border: '1px solid #E8E4DC', borderRadius: 8, background: tab === 'budget' ? '#8B7355' : '#FFFEF9', color: tab === 'budget' ? '#FFFEF9' : '#5C4033', cursor: 'pointer', fontWeight: 500, fontSize: 12 }}>Monat</button>
+            <button onClick={() => setTab('year')} style={{ padding: '6px 10px', border: '1px solid #E8E4DC', borderRadius: 8, background: tab === 'year' ? '#8B7355' : '#FFFEF9', color: tab === 'year' ? '#FFFEF9' : '#5C4033', cursor: 'pointer', fontWeight: 500, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} />Jahr</button>
+            <button onClick={tab === 'year' ? exportYearCSV : exportCSV} style={{ padding: 6, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', cursor: 'pointer' }} title="CSV exportieren"><Download size={16} color="#8B7355" /></button>
+            <button onClick={handlePrint} style={{ padding: 6, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', cursor: 'pointer' }} title="Drucken"><Printer size={16} color="#8B7355" /></button>
+            <button onClick={() => setShowDataMenu(!showDataMenu)} style={{ padding: 6, border: '1px solid #E8E4DC', borderRadius: 8, background: showDataMenu ? '#8B7355' : '#FFFEF9', cursor: 'pointer' }} title="Daten verwalten"><Save size={16} color={showDataMenu ? '#FFFEF9' : '#8B7355'} /></button>
             
             {showDataMenu && (
               <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, background: '#FFFEF9', border: '1px solid #E8E4DC', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 200, minWidth: 200, overflow: 'hidden' }}>
