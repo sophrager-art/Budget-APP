@@ -431,15 +431,23 @@ export default function App() {
       const saved = localStorage.getItem('budgetAppData');
       if (saved) {
         const parsed = JSON.parse(saved);
-        return {
-          allData: parsed.allData || { '2026-01': createMonthData(true) },
-          appName: parsed.appName || 'Budget'
-        };
+        // Nur laden wenn tatsächlich Daten vorhanden sind
+        if (parsed.allData && Object.keys(parsed.allData).length > 0) {
+          return {
+            allData: parsed.allData,
+            appName: parsed.appName || 'Budget'
+          };
+        }
       }
     } catch (e) {
       console.error('Fehler beim Laden:', e);
     }
-    return { allData: { '2026-01': createMonthData(true) }, appName: 'Budget' };
+    // Kein gespeicherter Stand -> leere Daten starten (KEINE Beispieldaten)
+    const currentMonthKey = getMonthKey(new Date());
+    return { 
+      allData: { [currentMonthKey]: createMonthData(false) }, 
+      appName: 'Budget' 
+    };
   };
 
   const initialData = loadFromStorage();
