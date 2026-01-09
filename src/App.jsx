@@ -430,6 +430,28 @@ export default function App() {
     setAllData(prev => ({ ...prev, [currentMonth]: { ...prev[currentMonth], [category]: prev[currentMonth][category].map(i => i.id === item.id ? item : i) } }));
   };
 
+  const addItem = (category, type) => {
+    const newId = `${category[0]}${Date.now()}`;
+    const defaultIcon = category === 'income' ? 'Briefcase' : category === 'fixedCosts' ? 'Home' : category === 'variableCosts' ? 'ShoppingCart' : 'PiggyBank';
+    const newItem = {
+      id: newId,
+      name: 'Neu',
+      amount: 0,
+      icon: defaultIcon,
+      desc: '',
+      ...(category === 'savings' && { target: 0, saved: 0 })
+    };
+    setAllData(prev => ({
+      ...prev,
+      [currentMonth]: {
+        ...prev[currentMonth],
+        [category]: [...prev[currentMonth][category], newItem]
+      }
+    }));
+    // Öffne sofort das Edit-Modal für den neuen Eintrag
+    setEditModal({ open: true, item: newItem, type, category });
+  };
+
   const deleteItem = (id, category) => {
     if (confirm('Löschen?')) {
       setAllData(prev => ({ ...prev, [currentMonth]: { ...prev[currentMonth], [category]: prev[currentMonth][category].filter(i => i.id !== id) } }));
@@ -748,7 +770,7 @@ export default function App() {
             </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Section title="Einnahmen" total={totIncome + (data.rollover || 0)} color="#D2B48C" icon={TrendingUp} onAdd={() => {}}>
+          <Section title="Einnahmen" total={totIncome + (data.rollover || 0)} color="#D2B48C" icon={TrendingUp} onAdd={() => addItem('income', 'income')}>
             {data.income.map(item => <SimpleItem key={item.id} item={item} onEdit={(i) => setEditModal({ open: true, item: i, type: 'income', category: 'income' })} onDelete={(id) => deleteItem(id, 'income')} />)}
             {data.rollover !== 0 && (
               <div style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', gap: 12, borderBottom: '1px solid #E8E4DC', background: data.rollover > 0 ? '#F5F5DC' : '#FAF0E6' }}>
@@ -767,15 +789,15 @@ export default function App() {
             )}
           </Section>
 
-          <Section title="Fixkosten" total={totFixed} color="#8B7355" icon={Home} onAdd={() => {}}>
+          <Section title="Fixkosten" total={totFixed} color="#8B7355" icon={Home} onAdd={() => addItem('fixedCosts', 'fixed')}>
             {data.fixedCosts.map(item => <SimpleItem key={item.id} item={item} onEdit={(i) => setEditModal({ open: true, item: i, type: 'fixed', category: 'fixedCosts' })} onDelete={(id) => deleteItem(id, 'fixedCosts')} />)}
           </Section>
 
-          <Section title="Variable Kosten" total={totVariable} color="#C3B091" icon={ShoppingCart} onAdd={() => {}}>
+          <Section title="Variable Kosten" total={totVariable} color="#C3B091" icon={ShoppingCart} onAdd={() => addItem('variableCosts', 'variable')}>
             {data.variableCosts.map(item => <VariableItem key={item.id} item={item} weekly={data.weekly?.[item.id]} onEdit={(i) => setEditModal({ open: true, item: i, type: 'variable', category: 'variableCosts' })} onDelete={(id) => deleteItem(id, 'variableCosts')} onUpdateWeekly={updateWeekly} />)}
           </Section>
 
-          <Section title="Rücklagen" total={totSavings} color="#8B8589" icon={PiggyBank} onAdd={() => {}}>
+          <Section title="Rücklagen" total={totSavings} color="#8B8589" icon={PiggyBank} onAdd={() => addItem('savings', 'savings')}>
             {data.savings.map(item => {
               const autoSaved = calculateSaved(item.id);
               const itemWithAutoSaved = { ...item, saved: autoSaved };
