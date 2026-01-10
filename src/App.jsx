@@ -479,26 +479,28 @@ export default function App() {
         allData
       };
       
-      // Robusterer Download für mobile Browser
+      // Für iOS Safari - verwende data URL statt Blob
       const dataStr = JSON.stringify(backup, null, 2);
-      const blob = new Blob([dataStr], { type: 'application/octet-stream' }); // octet-stream erzwingt Download
-      const url = URL.createObjectURL(blob);
+      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+      
       const a = document.createElement('a');
-      a.href = url;
+      a.href = dataUri;
       a.download = `${appName}-backup-${new Date().toISOString().split('T')[0]}.json`;
       a.style.display = 'none';
       
       document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       
-      // Cleanup mit Verzögerung für iOS
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-      
-      alert('Backup wird heruntergeladen...');
       setShowDataMenu(false);
+      
+      // Zeige Anleitung für iOS
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        setTimeout(() => {
+          alert('Die Datei wurde heruntergeladen.\n\nFinde sie in der Dateien-App → Downloads');
+        }, 500);
+      }
     } catch (error) {
       alert('Fehler beim Erstellen des Backups: ' + error.message);
       console.error('Backup error:', error);
