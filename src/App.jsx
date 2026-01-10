@@ -471,22 +471,38 @@ export default function App() {
 
   // Daten als JSON-Datei exportieren (Backup)
   const exportBackup = () => {
-    const backup = {
-      version: '1.0',
-      exportDate: new Date().toISOString(),
-      appName,
-      allData
-    };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${appName}-backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setShowDataMenu(false);
+    try {
+      const backup = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        appName,
+        allData
+      };
+      
+      // Robusterer Download für mobile Browser
+      const dataStr = JSON.stringify(backup, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/octet-stream' }); // octet-stream erzwingt Download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${appName}-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.style.display = 'none';
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup mit Verzögerung für iOS
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      alert('Backup wird heruntergeladen...');
+      setShowDataMenu(false);
+    } catch (error) {
+      alert('Fehler beim Erstellen des Backups: ' + error.message);
+      console.error('Backup error:', error);
+    }
   };
 
   // Daten aus JSON-Datei importieren (Restore)
