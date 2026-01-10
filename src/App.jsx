@@ -469,8 +469,8 @@ export default function App() {
     }
   }, [allData, appName]);
 
-  // Daten als JSON-Datei exportieren (Backup)
-  const exportBackup = () => {
+  // Daten als JSON-Datei exportieren (Backup) - mit iOS Share API
+  const exportBackup = async () => {
     try {
       const backup = {
         version: '1.0',
@@ -479,28 +479,49 @@ export default function App() {
         allData
       };
       
-      // Für iOS Safari - verwende data URL statt Blob
       const dataStr = JSON.stringify(backup, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+      const fileName = `${appName}-backup-${new Date().toISOString().split('T')[0]}.json`;
       
+      // Prüfe ob Web Share API verfügbar ist (iOS/moderne Browser)
+      if (navigator.share && navigator.canShare) {
+        // Erstelle eine Datei
+        const file = new File([dataStr], fileName, { type: 'application/json' });
+        
+        // Prüfe ob Dateien geteilt werden können
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'Budget Backup',
+              text: 'Backup deiner Budget-Daten'
+            });
+            setShowDataMenu(false);
+            return;
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              console.error('Share error:', err);
+            }
+          }
+        }
+      }
+      
+      // Fallback: Normaler Download für Desktop/ältere Browser
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = dataUri;
-      a.download = `${appName}-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.href = url;
+      a.download = fileName;
       a.style.display = 'none';
       
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
       
       setShowDataMenu(false);
-      
-      // Zeige Anleitung für iOS
-      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        setTimeout(() => {
-          alert('Die Datei wurde heruntergeladen.\n\nFinde sie in der Dateien-App → Downloads');
-        }, 500);
-      }
     } catch (error) {
       alert('Fehler beim Erstellen des Backups: ' + error.message);
       console.error('Backup error:', error);
