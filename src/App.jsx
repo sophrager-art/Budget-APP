@@ -54,7 +54,24 @@ const formatCurrency = (a) => new Intl.NumberFormat('de-DE', { style: 'currency'
 const formatPercent = (v) => new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 1 }).format(v);
 const getMonthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const getMonthName = (k) => { const [y, m] = k.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }); };
-const getShortMonthName = (k) => { const [y, m] = k.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'short' }); };
+// NEU: Auto-Kategorisierungs-Regeln
+const defaultCategoryRules = [
+  { keywords: ['BILLA', 'HOFER', 'PENNY', 'SPAR', 'LIDL'], categoryType: 'variableCosts', categoryName: 'Lebensmittel' },
+  { keywords: ['BP', 'OMV', 'SHELL', 'TANKEN'], categoryType: 'variableCosts', categoryName: 'Auto' },
+  { keywords: ['TRAFIK', 'TABAK'], categoryType: 'variableCosts', categoryName: 'Zigaretten' },
+  { keywords: ['MARCUS'], categoryType: 'fixedCosts', categoryName: 'Miete' },
+  { keywords: ['AUDIBLE', 'AMAZON'], categoryType: 'fixedCosts', categoryName: 'Audible' },
+  { keywords: ['FRESSNAPF', 'FUTTERHAUS'], categoryType: 'variableCosts', categoryName: 'Hund' },
+];
+
+// NEU: Wochenberechnung aus Datum
+const getWeekNumber = (dateStr) => {
+  const [day] = dateStr.split('.').map(Number);
+  if (day <= 7) return 'w1';
+  if (day <= 14) return 'w2';
+  if (day <= 21) return 'w3';
+  return 'w4';
+};const getShortMonthName = (k) => { const [y, m] = k.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'short' }); };
 
 // Jahresübersicht Komponente
 const YTDView = ({ allData, year, onSelectMonth }) => {
