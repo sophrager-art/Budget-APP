@@ -372,7 +372,8 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules }) => {
       const purpose = transaction['Verwendungszweck'] || '';
       
       if (date && amount !== 0) {
-        const fullText = `${description} ${recipient} ${purpose}`.toUpperCase();
+        // Bank Austria: Shop-Name ist im Buchungstext (z.B. "BILLA DANKT 0001528")
+        const fullText = `${description} ${purpose}`.toUpperCase();
         let category = null;
         let categoryType = null;
         
@@ -388,7 +389,7 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules }) => {
         transactions.push({
           id: `t${Date.now()}${i}`,
           date,
-          description: `${description} ${recipient}`.trim(),
+          description: description.split(/\s{2,}/)[0].trim(), // Nimm nur ersten Teil vor mehreren Leerzeichen
           amount: Math.abs(amount),
           isExpense: amount < 0,
           category: category || null,
