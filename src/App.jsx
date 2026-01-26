@@ -3,8 +3,7 @@ import {
   Home, Zap, Wifi, Shield, ShoppingCart, Utensils, Car, Heart, Shirt, Plane, PiggyBank, 
   Plus, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, 
   X, Edit3, Trash2, Briefcase, Phone, Dog, MoreHorizontal, Download, Printer, ArrowRight, 
-  Calendar, Upload, Save,
-  Euro, DollarSign, CreditCard, Wallet, Banknote, Coins, Receipt, 
+  Calendar, Upload, Save,FileText, Check, AlertCircle,  Euro, DollarSign, CreditCard, Wallet, Banknote, Coins, Receipt, 
   Gift, Baby, GraduationCap, Book, Music, Tv, Gamepad2, Camera,
   Bus, Train, Fuel, Bike,
   Coffee, Wine, Pizza,
@@ -322,7 +321,86 @@ const EditModal = ({ open, onClose, item, onSave, type }) => {
         </div>
         {type === 'savings' && (
           <>
-            <div style={{ marginBottom: 16 }}>
+            // NEU: Bank-Import Modal
+const BankImportModal = ({ open, onClose, onImport, data, categoryRules }) => {
+  const [csvText, setCsvText] = useState('');
+  const [parsedTransactions, setParsedTransactions] = useState([]);
+  const [step, setStep] = useState(1);
+
+  const parseCSV = (text) => {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split('\t').map(h => h.trim());
+    const transactions = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split('\t');
+      if (values.length < headers.length) continue;
+      
+      const transaction = {};
+      headers.forEach((header, idx) => {
+        transaction[header] = values[idx]?.trim() || '';
+      });
+      
+      const date = transaction['Buchungsdatum'] || '';
+      const description = transaction['Buchungstext'] || '';
+      const amount = parseFloat((transaction['Betrag'] || '0').replace(',', '.'));
+      const recipient = transaction['Empfängername'] || transaction['Auftraggebername'] || '';
+      const purpose = transaction['Verwendungszweck'] || '';
+      
+      if (date && amount !== 0) {
+        const fullText = `${description} ${recipient} ${purpose}`.toUpperCase();
+        let category = null;
+        let categoryType = null;
+        
+        for (const rule of categoryRules) {
+          if (rule.keywords.some(kw => fullText.includes(kw.toUpperCase()))) {
+            categoryType = rule.categoryType;
+            const categoryList = data[categoryType] || [];
+            category = categoryList.find(c => c.name === rule.categoryName);
+            if (category) break;
+          }
+        }
+        
+        transactions.push({
+          id: `t${Date.now()}${i}`,
+          date,
+          description: `${description} ${recipient}`.trim(),
+          amount: Math.abs(amount),
+          isExpense: amount < 0,
+          category: category || null,
+          categoryType: categoryType || 'variableCosts',
+          purpose,
+          selected: true
+        });
+      }
+    }
+    
+    return transactions;
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      setCsvText(text);
+      const parsed = parseCSV(text);
+      setParsedTransactions(parsed);
+      setStep(2);
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const updateCategory = (transactionId, categoryId, categoryType) => {
+    setParsedTransactions(prev => prev.map(t => {
+      if (t.id === transactionId) {
+        const categoryList = data[categoryType] || [];
+        const category = categoryList.find(c => c.id === categoryId);
+        return { ...t, category, ca            <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Ziel (€)</label>
               <input type="number" value={target} onChange={e => setTarget(e.target.value)} style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, boxSizing: 'border-box', background: '#FFFEF9' }} />
             </div>
