@@ -479,7 +479,6 @@ const TransactionModal = ({ open, onClose, transaction, onSave, data, allowCateg
             </div>
           </>
         )}
-        </div>
       </div>
       <div style={{ display: 'flex', gap: 12, padding: '16px 20px', borderTop: '1px solid #E8E4DC' }}>
         <button onClick={onClose} style={{ flex: 1, padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', cursor: 'pointer', fontWeight: 500, color: '#5C4033' }}>Abbrechen</button>
