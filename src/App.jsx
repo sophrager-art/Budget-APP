@@ -657,7 +657,7 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCa
         transactions.push({
           id: `t${Date.now()}${i}`,
           date,
-          description: description.split(/\s{2,}/)[0].trim(), // Nimm nur ersten Teil vor mehreren Leerzeichen
+          description: description.trim(), // Voller Buchungstext
           amount: Math.abs(amount),
           isExpense: amount < 0,
           category: category || null,
@@ -1276,6 +1276,7 @@ export default function App() {
           transactions: {}
         }
       }));
+      setLearningRules([]); // Learning-Rules auch zurücksetzen
       alert('CSV-Import wurde zurückgesetzt.');
     }
     setShowDataMenu(false);
