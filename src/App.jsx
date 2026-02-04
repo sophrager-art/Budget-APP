@@ -367,7 +367,7 @@ const QuickAddCategoryModal = ({ open, categoryType, onClose, onSave }) => {
 
   return (
     <Modal open={open} onClose={onClose} title="Neue Kategorie erstellen">
-      <div style={{ padding: 20 }}>
+      <div style={{ padding: 20, maxHeight: '50vh', overflowY: 'auto' }}>
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Name</label>
           <input 
@@ -402,10 +402,10 @@ const QuickAddCategoryModal = ({ open, categoryType, onClose, onSave }) => {
           </button>
           
           {showIconPicker && (
-            <div style={{ marginTop: 8, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', maxHeight: 250, overflowY: 'auto' }}>
+            <div style={{ marginTop: 8, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', maxHeight: 200, overflowY: 'auto' }}>
               {iconCategories.map(category => (
                 <div key={category.name}>
-                  <div style={{ padding: '8px 12px', background: '#FAF8F5', fontSize: 11, fontWeight: 600, color: '#888', position: 'sticky', top: 0 }}>
+                  <div style={{ padding: '8px 12px', background: '#FAF8F5', fontSize: 11, fontWeight: 600, color: '#888', position: 'sticky', top: 0, zIndex: 1 }}>
                     {category.name.toUpperCase()}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: 8 }}>
