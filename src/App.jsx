@@ -644,7 +644,7 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCa
                       </div>
                       <div style={{ fontSize: 14, color: '#5C4033', marginBottom: 8 }}>{t.description}</div>
                       
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <select 
                           value={t.categoryType} 
                           onChange={(e) => {
@@ -653,6 +653,7 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCa
                             if (firstCat) updateCategory(t.id, firstCat.id, type);
                           }}
                           style={{ 
+                            width: '100%',
                             padding: '6px 10px', 
                             border: '1px solid #E8E4DC', 
                             borderRadius: 6, 
@@ -664,40 +665,42 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCa
                           <option value="variableCosts">Variable Kosten</option>
                         </select>
                         
-                        <select 
-                          value={t.category?.id || ''} 
-                          onChange={(e) => updateCategory(t.id, e.target.value, t.categoryType)}
-                          style={{ 
-                            flex: 1,
-                            padding: '6px 10px', 
-                            border: '1px solid #E8E4DC', 
-                            borderRadius: 6, 
-                            fontSize: 12,
-                            background: '#FFFEF9'
-                          }}
-                        >
-                          <option value="">Nicht zugeordnet</option>
-                          {getCategoryOptions(t.categoryType).map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                          ))}
-                        </select>
-                        
-                        <button
-                          onClick={() => handleAddNewCategory(t.id, t.categoryType)}
-                          style={{
-                            padding: '6px 10px',
-                            border: '1px solid #8B7355',
-                            borderRadius: 6,
-                            background: '#FFFEF9',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4
-                          }}
-                          title="Neue Kategorie erstellen"
-                        >
-                          <Plus size={14} color="#8B7355" />
-                        </button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <select 
+                            value={t.category?.id || ''} 
+                            onChange={(e) => updateCategory(t.id, e.target.value, t.categoryType)}
+                            style={{ 
+                              flex: 1,
+                              padding: '6px 10px', 
+                              border: '1px solid #E8E4DC', 
+                              borderRadius: 6, 
+                              fontSize: 12,
+                              background: '#FFFEF9'
+                            }}
+                          >
+                            <option value="">Nicht zugeordnet</option>
+                            {getCategoryOptions(t.categoryType).map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                          
+                          <button
+                            onClick={() => handleAddNewCategory(t.id, t.categoryType)}
+                            style={{
+                              padding: '6px 10px',
+                              border: '1px solid #8B7355',
+                              borderRadius: 6,
+                              background: '#FFFEF9',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4
+                            }}
+                            title="Neue Kategorie erstellen"
+                          >
+                            <Plus size={14} color="#8B7355" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
