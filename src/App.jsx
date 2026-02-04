@@ -343,11 +343,118 @@ const EditModal = ({ open, onClose, item, onSave, type }) => {
   );
 };
 
+// NEU: Quick-Add Category Modal für Bank-Import
+const QuickAddCategoryModal = ({ open, categoryType, onClose, onSave }) => {
+  const [name, setName] = useState('');
+  const [icon, setIcon] = useState('MoreHorizontal');
+  const [showIconPicker, setShowIconPicker] = useState(false);
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    const newCategory = {
+      id: `${categoryType[0]}${Date.now()}`,
+      name: name.trim(),
+      amount: 0,
+      icon,
+      desc: ''
+    };
+    onSave(newCategory);
+    setName('');
+    setIcon('MoreHorizontal');
+    setShowIconPicker(false);
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Neue Kategorie erstellen">
+      <div style={{ padding: 20 }}>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Name</label>
+          <input 
+            value={name} 
+            onChange={e => setName(e.target.value)}
+            autoFocus
+            placeholder="z.B. Amazon"
+            style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, boxSizing: 'border-box', background: '#FFFEF9' }} 
+          />
+        </div>
+        
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#5C4033' }}>Icon</label>
+          <button
+            type="button"
+            onClick={() => setShowIconPicker(!showIconPicker)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 14px',
+              border: '1px solid #E8E4DC',
+              borderRadius: 8,
+              background: '#FFFEF9',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            {(() => { const IconComp = iconMap[icon] || MoreHorizontal; return <IconComp size={20} color="#333" />; })()}
+            <span style={{ flex: 1, textAlign: 'left', color: '#5C4033' }}>{icon}</span>
+            <ChevronDown size={16} color="#999" style={{ transform: showIconPicker ? 'rotate(180deg)' : 'none' }} />
+          </button>
+          
+          {showIconPicker && (
+            <div style={{ marginTop: 8, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', maxHeight: 250, overflowY: 'auto' }}>
+              {iconCategories.map(category => (
+                <div key={category.name}>
+                  <div style={{ padding: '8px 12px', background: '#FAF8F5', fontSize: 11, fontWeight: 600, color: '#888', position: 'sticky', top: 0 }}>
+                    {category.name.toUpperCase()}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, padding: 8 }}>
+                    {category.icons.map(iconKey => {
+                      const IconComp = iconMap[iconKey] || MoreHorizontal;
+                      return (
+                        <button
+                          key={iconKey}
+                          type="button"
+                          onClick={() => { setIcon(iconKey); setShowIconPicker(false); }}
+                          style={{
+                            padding: 8,
+                            border: icon === iconKey ? '2px solid #333' : '1px solid transparent',
+                            borderRadius: 6,
+                            background: icon === iconKey ? '#F0F0F0' : 'transparent',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          title={iconKey}
+                        >
+                          <IconComp size={18} color="#333" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 12, padding: '16px 20px', borderTop: '1px solid #E8E4DC' }}>
+        <button onClick={onClose} style={{ flex: 1, padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', cursor: 'pointer', fontWeight: 500, color: '#5C4033' }}>Abbrechen</button>
+        <button onClick={handleSave} disabled={!name.trim()} style={{ flex: 1, padding: 12, border: 'none', borderRadius: 8, background: '#8B7355', color: '#FFFEF9', cursor: 'pointer', fontWeight: 500, opacity: name.trim() ? 1 : 0.5 }}>Erstellen</button>
+      </div>
+    </Modal>
+  );
+};
+
 // NEU: Bank-Import Modal
-const BankImportModal = ({ open, onClose, onImport, data, categoryRules }) => {
+const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCategory, learningRules = [] }) => {
   const [csvText, setCsvText] = useState('');
   const [parsedTransactions, setParsedTransactions] = useState([]);
   const [step, setStep] = useState(1);
+  const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
+  const [newCategoryType, setNewCategoryType] = useState('variableCosts');
+  const [pendingTransactionId, setPendingTransactionId] = useState(null);
 
   const parseCSV = (text) => {
     // BOM entfernen falls vorhanden
@@ -379,12 +486,25 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules }) => {
         let category = null;
         let categoryType = null;
         
-        for (const rule of categoryRules) {
+        // Erst Learning-Rules prüfen (haben Priorität)
+        for (const rule of learningRules) {
           if (rule.keywords.some(kw => fullText.includes(kw.toUpperCase()))) {
             categoryType = rule.categoryType;
             const categoryList = data[categoryType] || [];
-            category = categoryList.find(c => c.name === rule.categoryName);
+            category = categoryList.find(c => c.id === rule.categoryId);
             if (category) break;
+          }
+        }
+        
+        // Falls keine Learning-Rule, dann Default-Rules
+        if (!category) {
+          for (const rule of categoryRules) {
+            if (rule.keywords.some(kw => fullText.includes(kw.toUpperCase()))) {
+              categoryType = rule.categoryType;
+              const categoryList = data[categoryType] || [];
+              category = categoryList.find(c => c.name === rule.categoryName);
+              if (category) break;
+            }
           }
         }
         
@@ -448,6 +568,21 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules }) => {
 
   const getCategoryOptions = (type) => {
     return (data[type] || []).map(c => ({ id: c.id, name: c.name, icon: c.icon }));
+  };
+
+  const handleAddNewCategory = (transactionId, categoryType) => {
+    setPendingTransactionId(transactionId);
+    setNewCategoryType(categoryType);
+    setShowNewCategoryModal(true);
+  };
+
+  const handleNewCategoryCreated = (newCategory) => {
+    setShowNewCategoryModal(false);
+    if (pendingTransactionId && newCategory) {
+      // Transaktion mit neuer Kategorie aktualisieren
+      updateCategory(pendingTransactionId, newCategory.id, newCategoryType);
+    }
+    setPendingTransactionId(null);
   };
 
   return (
@@ -546,6 +681,23 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules }) => {
                             <option key={cat.id} value={cat.id}>{cat.name}</option>
                           ))}
                         </select>
+                        
+                        <button
+                          onClick={() => handleAddNewCategory(t.id, t.categoryType)}
+                          style={{
+                            padding: '6px 10px',
+                            border: '1px solid #8B7355',
+                            borderRadius: 6,
+                            background: '#FFFEF9',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4
+                          }}
+                          title="Neue Kategorie erstellen"
+                        >
+                          <Plus size={14} color="#8B7355" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -589,6 +741,19 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules }) => {
           </div>
         )}
       </div>
+      
+      {/* Quick-Add Category Modal */}
+      {showNewCategoryModal && (
+        <QuickAddCategoryModal
+          open={showNewCategoryModal}
+          categoryType={newCategoryType}
+          onClose={() => setShowNewCategoryModal(false)}
+          onSave={(newCat) => {
+            onAddCategory(newCat, newCategoryType);
+            handleNewCategoryCreated(newCat);
+          }}
+        />
+      )}
     </Modal>
   );
 };
@@ -730,7 +895,8 @@ export default function App() {
         if (parsed.allData && Object.keys(parsed.allData).length > 0) {
           return {
             allData: parsed.allData,
-            appName: parsed.appName || 'Budget'
+            appName: parsed.appName || 'Budget',
+            learningRules: parsed.learningRules || []
           };
         }
       }
@@ -741,7 +907,8 @@ export default function App() {
     const currentMonthKey = getMonthKey(new Date());
     return { 
       allData: { [currentMonthKey]: createMonthData(false) }, 
-      appName: 'Budget' 
+      appName: 'Budget',
+      learningRules: []
     };
   };
 
@@ -755,16 +922,17 @@ export default function App() {
   const [showDataMenu, setShowDataMenu] = useState(false);
   const [showBankImport, setShowBankImport] = useState(false); // NEU
   const [viewMode, setViewMode] = useState('budget'); // NEU: 'budget' oder 'comparison'
+  const [learningRules, setLearningRules] = useState(initialData.learningRules); // NEU: Auto-Learning
   const year = currentMonth.split('-')[0];
 
   // Speichere Daten automatisch bei Änderungen
   useEffect(() => {
     try {
-      localStorage.setItem('budgetAppData', JSON.stringify({ allData, appName }));
+      localStorage.setItem('budgetAppData', JSON.stringify({ allData, appName, learningRules }));
     } catch (e) {
       console.error('Fehler beim Speichern:', e);
     }
-  }, [allData, appName]);
+  }, [allData, appName, learningRules]);
 
   // Daten als JSON-Datei exportieren (Backup) - mit iOS Share API
   const exportBackup = async () => {
@@ -1011,6 +1179,30 @@ export default function App() {
 
   // NEU: Bank-Import Funktion
   const handleBankImport = (transactions) => {
+    // Learning-Rules aktualisieren: Für jede Transaktion mit Kategorie eine Rule erstellen
+    const newLearningRules = [...learningRules];
+    transactions.forEach(t => {
+      if (t.category && t.description) {
+        // Extrahiere Schlüsselwort aus Beschreibung (erster Teil vor Leerzeichen/Zahlen)
+        const keyword = t.description.split(/[\s\d]/)[0].toUpperCase();
+        
+        // Prüfe ob bereits eine Rule für diese Kategorie und dieses Keyword existiert
+        const exists = newLearningRules.some(rule => 
+          rule.categoryId === t.category.id && 
+          rule.keywords.some(kw => kw.toUpperCase() === keyword)
+        );
+        
+        if (!exists && keyword.length > 2) {
+          newLearningRules.push({
+            keywords: [keyword],
+            categoryType: t.categoryType,
+            categoryId: t.category.id
+          });
+        }
+      }
+    });
+    setLearningRules(newLearningRules);
+    
     setAllData(prev => {
       const currentData = prev[currentMonth];
       const existing = currentData.bankTransactions || [];
@@ -1508,6 +1700,16 @@ export default function App() {
         onImport={handleBankImport}
         data={data}
         categoryRules={defaultCategoryRules}
+        learningRules={learningRules}
+        onAddCategory={(newCategory, categoryType) => {
+          setAllData(prev => ({
+            ...prev,
+            [currentMonth]: {
+              ...prev[currentMonth],
+              [categoryType]: [...prev[currentMonth][categoryType], newCategory]
+            }
+          }));
+        }}
       />
     </div>
   );
