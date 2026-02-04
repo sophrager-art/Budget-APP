@@ -933,7 +933,8 @@ const ProgressBar = ({ value, color = '#8B7355' }) => (
 const IncomeItem = ({ item, transactions = [], onEdit, onDelete, onAddTransaction, onEditTransaction, onDeleteTransaction }) => {
   const [isOpen, setIsOpen] = useState(false);
   const Icon = iconMap[item.icon] || MoreHorizontal;
-  const total = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const transactionTotal = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const total = item.amount + transactionTotal; // Budget + Transaktionen
 
   return (
     <div style={{ borderBottom: '1px solid #E8E4DC' }}>
@@ -945,6 +946,7 @@ const IncomeItem = ({ item, transactions = [], onEdit, onDelete, onAddTransactio
           <div style={{ fontWeight: 500, color: '#5C4033' }}>{item.name}</div>
           <div style={{ fontSize: 13, color: '#8B8589' }}>
             {formatCurrency(total)}
+            {item.amount > 0 && <span style={{ marginLeft: 8, color: '#8B8589' }}>(Budget: {formatCurrency(item.amount)})</span>}
             {transactions.length > 0 && <span style={{ marginLeft: 8, color: '#8B8589' }}>({transactions.length} Transaktionen)</span>}
           </div>
         </div>
@@ -987,8 +989,15 @@ const IncomeItem = ({ item, transactions = [], onEdit, onDelete, onAddTransactio
           )}
           
           <div style={{ paddingTop: 12, borderTop: '1px solid #E8E4DC', marginTop: 8 }}>
-            <span style={{ color: '#8B8589' }}>Gesamt: </span>
-            <span style={{ fontWeight: 600, color: '#6B8E23' }}>+{formatCurrency(total)}</span>
+            {item.amount > 0 && (
+              <div style={{ fontSize: 12, color: '#8B8589', marginBottom: 4 }}>
+                Budget: {formatCurrency(item.amount)} + Transaktionen: {formatCurrency(transactionTotal)}
+              </div>
+            )}
+            <div>
+              <span style={{ color: '#8B8589' }}>Gesamt: </span>
+              <span style={{ fontWeight: 600, color: '#6B8E23' }}>+{formatCurrency(total)}</span>
+            </div>
           </div>
         </div>
       )}
@@ -1600,6 +1609,7 @@ export default function App() {
     setAllData(prev => {
       const currentData = prev[currentMonth];
       const transactions = currentData.transactions || {};
+      const bankTransactions = currentData.bankTransactions || [];
       
       // Alte und neue Kategorie bestimmen
       const oldCategoryId = transaction.categoryId;
@@ -1634,11 +1644,15 @@ export default function App() {
         updatedTransactions[newCategoryId] = [...categoryTransactions, savedTransaction];
       }
       
+      // WICHTIG: Aus bankTransactions entfernen damit nicht doppelt gezählt
+      const updatedBankTransactions = bankTransactions.filter(bt => bt.id !== transaction.id);
+      
       return {
         ...prev,
         [currentMonth]: {
           ...currentData,
-          transactions: updatedTransactions
+          transactions: updatedTransactions,
+          bankTransactions: updatedBankTransactions
         }
       };
     });
@@ -1649,6 +1663,7 @@ export default function App() {
     setAllData(prev => {
       const currentData = prev[currentMonth];
       const transactions = currentData.transactions || {};
+      const bankTransactions = currentData.bankTransactions || [];
       
       // Find and remove transaction from its category
       const updatedTransactions = {};
@@ -1656,11 +1671,15 @@ export default function App() {
         updatedTransactions[catId] = transactions[catId].filter(t => t.id !== transactionId);
       });
       
+      // Auch aus bankTransactions entfernen
+      const updatedBankTransactions = bankTransactions.filter(bt => bt.id !== transactionId);
+      
       return {
         ...prev,
         [currentMonth]: {
           ...currentData,
-          transactions: updatedTransactions
+          transactions: updatedTransactions,
+          bankTransactions: updatedBankTransactions
         }
       };
     });
