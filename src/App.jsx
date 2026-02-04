@@ -350,14 +350,16 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules }) => {
   const [step, setStep] = useState(1);
 
   const parseCSV = (text) => {
-    const lines = text.trim().split('\n');
+    // BOM entfernen falls vorhanden
+    const cleanText = text.replace(/^\uFEFF/, '').trim();
+    const lines = cleanText.split('\n');
     if (lines.length < 2) return [];
     
-    const headers = lines[0].split('\t').map(h => h.trim());
+    const headers = lines[0].split(';').map(h => h.trim());
     const transactions = [];
     
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split('\t');
+      const values = lines[i].split(';');
       if (values.length < headers.length) continue;
       
       const transaction = {};
@@ -1055,6 +1057,15 @@ export default function App() {
     const [y, m] = currentMonth.split('-').map(Number);
     const nextKey = getMonthKey(new Date(y, m, 1));
     
+    // Berechne verfügbares Budget exakt
+    const currentData = allData[currentMonth];
+    const income = currentData.income?.reduce((s, i) => s + i.amount, 0) || 0;
+    const fixed = currentData.fixedCosts?.reduce((s, i) => s + i.amount, 0) || 0;
+    const variable = currentData.variableCosts?.reduce((s, i) => s + i.amount, 0) || 0;
+    const savings = currentData.savings?.reduce((s, i) => s + i.amount, 0) || 0;
+    const rollover = currentData.rollover || 0;
+    const availableToTransfer = income + rollover - fixed - variable - savings;
+    
     setAllData(prev => {
       const existingData = prev[nextKey];
       if (existingData) {
@@ -1062,7 +1073,7 @@ export default function App() {
           ...prev, 
           [nextKey]: { 
             ...existingData, 
-            rollover: (existingData.rollover || 0) + available 
+            rollover: (existingData.rollover || 0) + availableToTransfer 
           } 
         };
       } else {
@@ -1071,7 +1082,7 @@ export default function App() {
           ...prev, 
           [nextKey]: { 
             ...newMonthData, 
-            rollover: available 
+            rollover: availableToTransfer 
           } 
         };
       }
