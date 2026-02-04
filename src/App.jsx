@@ -996,6 +996,84 @@ const IncomeItem = ({ item, transactions = [], onEdit, onDelete, onAddTransactio
   );
 };
 
+const FixedCostItem = ({ item, transactions = [], onEdit, onDelete, onAddTransaction, onEditTransaction, onDeleteTransaction, actualAmount, showComparison }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const Icon = iconMap[item.icon] || MoreHorizontal;
+  const spent = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const rest = item.amount - spent;
+  const diff = showComparison ? item.amount - (actualAmount || 0) : 0;
+
+  return (
+    <div style={{ borderBottom: '1px solid #E8E4DC' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', gap: 12, cursor: 'pointer' }} onClick={() => setIsOpen(!isOpen)}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={20} color="#8B7355" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 500, color: '#5C4033' }}>{item.name}</div>
+          <div style={{ fontSize: 13, color: '#8B8589' }}>
+            {formatCurrency(spent)} / {formatCurrency(item.amount)}
+            {transactions.length > 0 && <span style={{ marginLeft: 8, color: '#8B8589' }}>({transactions.length} Transaktionen)</span>}
+          </div>
+          {showComparison && actualAmount !== undefined && (
+            <div style={{ fontSize: 12, marginTop: 4 }}>
+              <div style={{ color: '#8B8589' }}>
+                Ist: {formatCurrency(actualAmount || 0)}
+              </div>
+              <div style={{ color: diff >= 0 ? '#6B8E23' : '#A0522D', fontWeight: 500 }}>
+                {diff >= 0 ? `${formatCurrency(diff)} unter Budget ✅` : `${formatCurrency(Math.abs(diff))} über Budget ❌`}
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{ padding: 8, border: 'none', background: 'transparent', cursor: 'pointer' }}><Edit3 size={16} color="#8B8589" /></button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} style={{ padding: 8, border: 'none', background: 'transparent', cursor: 'pointer' }}><Trash2 size={16} color="#8B8589" /></button>
+          {isOpen ? <ChevronUp size={20} color="#8B8589" /> : <ChevronDown size={20} color="#8B8589" />}
+        </div>
+      </div>
+      {isOpen && (
+        <div style={{ padding: '0 20px 16px', background: '#FAF8F5' }}>
+          <div style={{ fontSize: 12, color: '#8B8589', marginBottom: 12, fontWeight: 500, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>TRANSAKTIONEN</span>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onAddTransaction(item.id); }}
+              style={{ padding: '4px 8px', border: '1px solid #8B7355', borderRadius: 6, background: '#FFFEF9', cursor: 'pointer', fontSize: 11, color: '#8B7355', display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <Plus size={12} /> Hinzufügen
+            </button>
+          </div>
+          
+          {transactions.length === 0 ? (
+            <div style={{ padding: 20, textAlign: 'center', color: '#8B8589', fontSize: 13 }}>
+              Keine Transaktionen. Klicke "+ Hinzufügen" oder importiere CSV.
+            </div>
+          ) : (
+            <div>
+              {transactions.map((t) => (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #E8E4DC' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: '#5C4033', fontWeight: 500 }}>{t.description}</div>
+                    {t.date && <div style={{ fontSize: 11, color: '#8B8589' }}>{t.date}</div>}
+                  </div>
+                  <div style={{ fontWeight: 600, color: '#A0522D', marginRight: 8 }}>-{formatCurrency(t.amount)}</div>
+                  <button onClick={(e) => { e.stopPropagation(); onEditTransaction(t); }} style={{ padding: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}><Edit3 size={14} color="#8B8589" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); onDeleteTransaction(t.id); }} style={{ padding: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}><Trash2 size={14} color="#8B8589" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, borderTop: '1px solid #E8E4DC', marginTop: 8 }}>
+            <span style={{ color: '#8B8589' }}>Ausgegeben: {formatCurrency(spent)}</span>
+            <span style={{ fontWeight: 600, color: rest >= 0 ? '#6B8E23' : '#A0522D' }}>{rest >= 0 ? `Rest: ${formatCurrency(rest)}` : `Über: ${formatCurrency(Math.abs(rest))}`}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const VariableItem = ({ item, transactions = [], onEdit, onDelete, onAddTransaction, onEditTransaction, onDeleteTransaction, actualAmount, showComparison }) => {
   const [isOpen, setIsOpen] = useState(false);
   const Icon = iconMap[item.icon] || MoreHorizontal;
@@ -1298,6 +1376,53 @@ export default function App() {
     setShowDataMenu(false);
   };
 
+  // NEU: Kategorien in alle Monate synchronisieren
+  const syncCategories = () => {
+    if (confirm('Kategorien vom aktuellen Monat in ALLE anderen Monate übernehmen? (Fixkosten mit Budget, Rest ohne Budget)')) {
+      const sourceData = allData[currentMonth];
+      if (!sourceData) {
+        alert('Kein Quell-Monat vorhanden!');
+        return;
+      }
+      
+      setAllData(prev => {
+        const updated = { ...prev };
+        
+        // Für jeden Monat außer dem aktuellen
+        Object.keys(updated).forEach(monthKey => {
+          if (monthKey !== currentMonth) {
+            updated[monthKey] = {
+              ...updated[monthKey],
+              // Kategorien übernehmen
+              income: sourceData.income.map(item => ({ 
+                ...item, 
+                amount: updated[monthKey].income?.find(i => i.id === item.id)?.amount || 0 
+              })),
+              fixedCosts: sourceData.fixedCosts.map(item => ({ 
+                ...item, 
+                amount: item.amount // Fixkosten MIT Budget
+              })),
+              variableCosts: sourceData.variableCosts.map(item => ({ 
+                ...item, 
+                amount: updated[monthKey].variableCosts?.find(i => i.id === item.id)?.amount || 0 
+              })),
+              savings: sourceData.savings.map(item => ({ 
+                ...item, 
+                amount: updated[monthKey].savings?.find(i => i.id === item.id)?.amount || 0,
+                saved: updated[monthKey].savings?.find(i => i.id === item.id)?.saved || 0
+              }))
+            };
+          }
+        });
+        
+        return updated;
+      });
+      
+      alert('Kategorien wurden in alle Monate übernommen!');
+    }
+    setShowDataMenu(false);
+  };
+
   const getData = () => {
     const existing = allData[currentMonth];
     if (!existing) {
@@ -1341,11 +1466,11 @@ export default function App() {
   const actualVariable = getTransactionTotal(data.variableCosts.map(i => i.id));
   const actualSavings = getTransactionTotal(data.savings.map(i => i.id));
   
-  // Gesamtbeträge: Geplant ODER Tatsächlich (je nachdem was höher)
-  const totIncome = Math.max(plannedIncome, actualIncome);
-  const totFixed = Math.max(plannedFixed, actualFixed);
-  const totVariable = Math.max(plannedVariable, actualVariable);
-  const totSavings = Math.max(plannedSavings, actualSavings);
+  // Gesamtbeträge: Geplant + Tatsächlich (addieren, nicht MAX!)
+  const totIncome = plannedIncome + actualIncome;
+  const totFixed = plannedFixed + actualFixed;
+  const totVariable = plannedVariable + actualVariable;
+  const totSavings = plannedSavings + actualSavings;
   
   // NEU: Nicht zugeordnete Einnahmen aus CSV
   const unassignedIncome = (data.bankTransactions || [])
@@ -1895,6 +2020,9 @@ export default function App() {
                   <Upload size={16} color="#8B7355" /> Backup laden
                   <input type="file" accept=".json" onChange={importBackup} style={{ display: 'none' }} />
                 </label>
+                <button onClick={syncCategories} style={{ width: '100%', padding: '12px 16px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, color: '#2563EB', fontSize: 14, borderTop: '1px solid #E8E4DC' }}>
+                  <ArrowRight size={16} /> Kategorien synchronisieren
+                </button>
                 <button onClick={clearTransactions} style={{ width: '100%', padding: '12px 16px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, color: '#D97706', fontSize: 14, borderTop: '1px solid #E8E4DC' }}>
                   <X size={16} /> CSV-Import zurücksetzen
                 </button>
@@ -2015,16 +2143,24 @@ export default function App() {
           </Section>
 
           <Section title="Fixkosten" total={totFixed} color="#8B7355" icon={Home} onAdd={() => addItem('fixedCosts', 'fixed')}>
-            {data.fixedCosts.map(item => (
-              <SimpleItem 
-                key={item.id} 
-                item={item} 
-                onEdit={(i) => setEditModal({ open: true, item: i, type: 'fixed', category: 'fixedCosts' })} 
-                onDelete={(id) => deleteItem(id, 'fixedCosts')}
-                actualAmount={viewMode === 'comparison' ? getActualExpenses('fixedCosts', item.id) : undefined}
-                showComparison={viewMode === 'comparison'}
-              />
-            ))}
+            {data.fixedCosts.map(item => {
+              const actualAmount = viewMode === 'comparison' ? getActualExpenses('fixedCosts', item.id) : undefined;
+              const itemTransactions = (data.transactions && data.transactions[item.id]) || [];
+              return (
+                <FixedCostItem 
+                  key={item.id} 
+                  item={item}
+                  transactions={itemTransactions}
+                  onEdit={(i) => setEditModal({ open: true, item: i, type: 'fixed', category: 'fixedCosts' })} 
+                  onDelete={(id) => deleteItem(id, 'fixedCosts')}
+                  onAddTransaction={(catId) => addTransaction(catId)}
+                  onEditTransaction={(t) => editTransaction(t)}
+                  onDeleteTransaction={(tId) => deleteTransaction(tId)}
+                  actualAmount={actualAmount}
+                  showComparison={viewMode === 'comparison'}
+                />
+              );
+            })}
           </Section>
 
           <Section title="Variable Kosten" total={totVariable} color="#C3B091" icon={ShoppingCart} onAdd={() => addItem('variableCosts', 'variable')}>
