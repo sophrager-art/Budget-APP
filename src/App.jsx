@@ -587,7 +587,7 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCa
 
   return (
     <Modal open={open} onClose={onClose} title="Bank CSV importieren">
-      <div style={{ padding: 20, maxHeight: '70vh', overflowY: 'auto' }}>
+      <div style={{ padding: 20, maxHeight: '60vh', overflowY: 'auto' }}>
         {step === 1 && (
           <div>
             <p style={{ color: '#5C4033', marginBottom: 16 }}>
@@ -618,7 +618,7 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCa
               </span>
             </div>
 
-            <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+            <div style={{ maxHeight: '45vh', overflowY: 'auto' }}>
               {parsedTransactions.map(t => (
                 <div key={t.id} style={{ 
                   padding: 12, 
