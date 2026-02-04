@@ -345,35 +345,71 @@ const EditModal = ({ open, onClose, item, onSave, type }) => {
 };
 
 // NEU: Transaction Modal zum Hinzufügen/Bearbeiten von Transaktionen
-const TransactionModal = ({ open, onClose, transaction, onSave }) => {
+const TransactionModal = ({ open, onClose, transaction, onSave, data, allowCategoryChange = false }) => {
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
+  const [categoryType, setCategoryType] = useState('variableCosts');
+  const [categoryId, setCategoryId] = useState('');
 
   React.useEffect(() => {
     if (open && transaction) {
       setDate(transaction.date || '');
       setDescription(transaction.description || '');
       setAmount(transaction.amount?.toString() || '');
+      
+      // Finde aktuelle Kategorie
+      if (allowCategoryChange && transaction.categoryId) {
+        const inIncome = data?.income?.find(c => c.id === transaction.categoryId);
+        const inFixed = data?.fixedCosts?.find(c => c.id === transaction.categoryId);
+        const inVariable = data?.variableCosts?.find(c => c.id === transaction.categoryId);
+        
+        if (inIncome) {
+          setCategoryType('income');
+          setCategoryId(transaction.categoryId);
+        } else if (inFixed) {
+          setCategoryType('fixedCosts');
+          setCategoryId(transaction.categoryId);
+        } else if (inVariable) {
+          setCategoryType('variableCosts');
+          setCategoryId(transaction.categoryId);
+        }
+      }
     } else if (open) {
       // Neuer Eintrag: Heutiges Datum vorausfüllen
       const today = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
       setDate(today);
       setDescription('');
       setAmount('');
+      setCategoryType('variableCosts');
+      setCategoryId('');
     }
-  }, [open, transaction]);
+  }, [open, transaction, allowCategoryChange, data]);
 
   const handleSave = () => {
     if (!description.trim() || !amount) return;
-    onSave({
+    
+    const savedTransaction = {
       ...(transaction || {}),
       id: transaction?.id || `t${Date.now()}`,
       date: date || new Date().toLocaleDateString('de-DE'),
       description: description.trim(),
       amount: parseFloat(amount) || 0
-    });
+    };
+    
+    // Bei Kategorie-Änderung: neue categoryId mitgeben
+    if (allowCategoryChange && categoryId) {
+      savedTransaction.newCategoryId = categoryId;
+      savedTransaction.newCategoryType = categoryType;
+    }
+    
+    onSave(savedTransaction);
     onClose();
+  };
+
+  const getCategoryOptions = (type) => {
+    if (!data) return [];
+    return (data[type] || []).map(c => ({ id: c.id, name: c.name }));
   };
 
   return (
@@ -409,6 +445,40 @@ const TransactionModal = ({ open, onClose, transaction, onSave }) => {
             step="0.01"
             style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, boxSizing: 'border-box', background: '#FFFEF9' }} 
           />
+        </div>
+        
+        {allowCategoryChange && (
+          <>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Typ</label>
+              <select 
+                value={categoryType}
+                onChange={(e) => {
+                  setCategoryType(e.target.value);
+                  setCategoryId('');
+                }}
+                style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, background: '#FFFEF9' }}
+              >
+                <option value="income">Einnahmen</option>
+                <option value="fixedCosts">Fixkosten</option>
+                <option value="variableCosts">Variable Kosten</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Kategorie</label>
+              <select 
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, background: '#FFFEF9' }}
+              >
+                <option value="">Bitte wählen</option>
+                {getCategoryOptions(categoryType).map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 12, padding: '16px 20px', borderTop: '1px solid #E8E4DC' }}>
@@ -1365,28 +1435,45 @@ export default function App() {
     setAllData(prev => {
       const currentData = prev[currentMonth];
       const transactions = currentData.transactions || {};
-      const categoryId = transactionModal.categoryId || transaction.categoryId;
       
-      const categoryTransactions = transactions[categoryId] || [];
+      // Alte und neue Kategorie bestimmen
+      const oldCategoryId = transaction.categoryId;
+      const newCategoryId = transaction.newCategoryId || transactionModal.categoryId || transaction.categoryId;
+      
+      // Wenn Kategorie geändert wurde, aus alter entfernen
+      let updatedTransactions = { ...transactions };
+      if (oldCategoryId && oldCategoryId !== newCategoryId) {
+        const oldCatTransactions = updatedTransactions[oldCategoryId] || [];
+        updatedTransactions[oldCategoryId] = oldCatTransactions.filter(t => t.id !== transaction.id);
+      }
+      
+      // In neue/aktuelle Kategorie einfügen oder aktualisieren
+      const categoryTransactions = updatedTransactions[newCategoryId] || [];
       const existingIndex = categoryTransactions.findIndex(t => t.id === transaction.id);
       
-      let updatedTransactions;
+      const savedTransaction = {
+        id: transaction.id,
+        date: transaction.date,
+        description: transaction.description,
+        amount: transaction.amount,
+        categoryId: newCategoryId
+      };
+      
       if (existingIndex >= 0) {
         // Update existing
-        updatedTransactions = categoryTransactions.map((t, i) => i === existingIndex ? transaction : t);
+        updatedTransactions[newCategoryId] = categoryTransactions.map((t, i) => 
+          i === existingIndex ? savedTransaction : t
+        );
       } else {
         // Add new
-        updatedTransactions = [...categoryTransactions, { ...transaction, categoryId }];
+        updatedTransactions[newCategoryId] = [...categoryTransactions, savedTransaction];
       }
       
       return {
         ...prev,
         [currentMonth]: {
           ...currentData,
-          transactions: {
-            ...transactions,
-            [categoryId]: updatedTransactions
-          }
+          transactions: updatedTransactions
         }
       };
     });
@@ -1420,22 +1507,32 @@ export default function App() {
     const newLearningRules = [...learningRules];
     transactions.forEach(t => {
       if (t.category && t.description) {
-        // Extrahiere Schlüsselwort aus Beschreibung (erster Teil vor Leerzeichen/Zahlen)
-        const keyword = t.description.split(/[\s\d]/)[0].toUpperCase();
+        // Extrahiere ALLE relevanten Keywords aus Beschreibung (nicht nur erstes Wort)
+        const words = t.description.toUpperCase().split(/[\s\d]+/).filter(w => w.length > 2);
         
-        // Prüfe ob bereits eine Rule für diese Kategorie und dieses Keyword existiert
-        const exists = newLearningRules.some(rule => 
-          rule.categoryId === t.category.id && 
-          rule.keywords.some(kw => kw.toUpperCase() === keyword)
-        );
-        
-        if (!exists && keyword.length > 2) {
-          newLearningRules.push({
-            keywords: [keyword],
-            categoryType: t.categoryType,
-            categoryId: t.category.id
-          });
-        }
+        // Speichere mehrere Keywords für bessere Zuordnung
+        words.forEach(keyword => {
+          const exists = newLearningRules.some(rule => 
+            rule.categoryId === t.category.id && 
+            rule.keywords.some(kw => kw.toUpperCase() === keyword)
+          );
+          
+          if (!exists && keyword.length > 2) {
+            // Suche nach existierender Rule für diese Kategorie
+            const existingRule = newLearningRules.find(r => r.categoryId === t.category.id);
+            if (existingRule) {
+              // Füge Keyword zu bestehender Rule hinzu
+              existingRule.keywords.push(keyword);
+            } else {
+              // Erstelle neue Rule
+              newLearningRules.push({
+                keywords: [keyword],
+                categoryType: t.categoryType,
+                categoryId: t.category.id
+              });
+            }
+          }
+        });
       }
     });
     setLearningRules(newLearningRules);
@@ -1996,6 +2093,8 @@ export default function App() {
         transaction={transactionModal.transaction}
         onClose={() => setTransactionModal({ open: false, transaction: null, categoryId: null })}
         onSave={saveTransaction}
+        data={data}
+        allowCategoryChange={transactionModal.transaction !== null}
       />
       <BankImportModal 
         open={showBankImport} 
