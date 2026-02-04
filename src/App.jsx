@@ -193,9 +193,24 @@ const createMonthData = (withExampleData = false) => ({
     { id: 's3', name: 'Hund', amount: withExampleData ? 30 : 0, icon: 'Dog', target: withExampleData ? 500 : 0, saved: withExampleData ? 150 : 0 }
   ],
   rollover: 0,
-  transactions: {}, // NEU: Transaktionen pro Kategorie { categoryId: [{ id, date, description, amount }] }
-  bankTransactions: [] // Importierte Bank-Transaktionen
+  transactions: {},
+  bankTransactions: []
 });
+
+// NEU: Erstelle Monatsdaten basierend auf Vormonat (Kategorien übernehmen, Fixkosten-Budgets übernehmen)
+const createMonthDataFromPrevious = (previousMonthData) => {
+  if (!previousMonthData) return createMonthData(false);
+  
+  return {
+    income: previousMonthData.income.map(item => ({ ...item, amount: 0 })), // Kategorien übernehmen, Budget auf 0
+    fixedCosts: previousMonthData.fixedCosts.map(item => ({ ...item })), // Fixkosten MIT Budget übernehmen
+    variableCosts: previousMonthData.variableCosts.map(item => ({ ...item, amount: 0 })), // Kategorien übernehmen, Budget auf 0
+    savings: previousMonthData.savings.map(item => ({ ...item, amount: 0, saved: 0 })), // Kategorien übernehmen, Budget/Saved auf 0
+    rollover: 0,
+    transactions: {},
+    bankTransactions: []
+  };
+};
 
 const Modal = ({ open, onClose, title, children }) => {
   if (!open) return null;
@@ -462,6 +477,7 @@ const TransactionModal = ({ open, onClose, transaction, onSave, data, allowCateg
                 <option value="income">Einnahmen</option>
                 <option value="fixedCosts">Fixkosten</option>
                 <option value="variableCosts">Variable Kosten</option>
+                <option value="savings">Rücklagen</option>
               </select>
             </div>
             <div style={{ marginBottom: 16 }}>
@@ -809,6 +825,7 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCa
                           <option value="income">Einnahmen</option>
                           <option value="fixedCosts">Fixkosten</option>
                           <option value="variableCosts">Variable Kosten</option>
+                          <option value="savings">Rücklagen</option>
                         </select>
                         
                         <div style={{ display: 'flex', gap: 8 }}>
@@ -1284,28 +1301,13 @@ export default function App() {
   const getData = () => {
     const existing = allData[currentMonth];
     if (!existing) {
-      // Finde vorherigen Monat um Sparziele zu übernehmen
+      // Finde vorherigen Monat
       const [y, m] = currentMonth.split('-').map(Number);
       const prevMonthKey = getMonthKey(new Date(y, m - 2, 1));
       const prevData = allData[prevMonthKey];
       
-      const newData = createMonthData(false);
-      
-      // Übernehme Sparziele vom Vormonat
-      if (prevData?.savings) {
-        newData.savings = newData.savings.map(saving => {
-          const prevSaving = prevData.savings.find(s => s.id === saving.id);
-          if (prevSaving) {
-            return {
-              ...saving,
-              target: prevSaving.target, // Sparziel übernehmen
-              name: prevSaving.name,
-              icon: prevSaving.icon
-            };
-          }
-          return saving;
-        });
-      }
+      // Erstelle neuen Monat basierend auf Vormonat (Kategorien + Fixkosten übernehmen)
+      const newData = createMonthDataFromPrevious(prevData);
       
       // Nur setzen wenn wirklich noch nicht vorhanden
       setAllData(prev => {
@@ -1318,10 +1320,32 @@ export default function App() {
   };
 
   const data = getData();
-  const totIncome = data.income.reduce((s, i) => s + i.amount, 0);
-  const totFixed = data.fixedCosts.reduce((s, i) => s + i.amount, 0);
-  const totVariable = data.variableCosts.reduce((s, i) => s + i.amount, 0);
-  const totSavings = data.savings.reduce((s, i) => s + i.amount, 0);
+  
+  // Geplante Budgets
+  const plannedIncome = data.income.reduce((s, i) => s + i.amount, 0);
+  const plannedFixed = data.fixedCosts.reduce((s, i) => s + i.amount, 0);
+  const plannedVariable = data.variableCosts.reduce((s, i) => s + i.amount, 0);
+  const plannedSavings = data.savings.reduce((s, i) => s + i.amount, 0);
+  
+  // Tatsächliche Ausgaben/Einnahmen aus Transaktionen
+  const getTransactionTotal = (categoryIds) => {
+    if (!data.transactions) return 0;
+    return categoryIds.reduce((sum, catId) => {
+      const catTransactions = data.transactions[catId] || [];
+      return sum + catTransactions.reduce((s, t) => s + t.amount, 0);
+    }, 0);
+  };
+  
+  const actualIncome = getTransactionTotal(data.income.map(i => i.id));
+  const actualFixed = getTransactionTotal(data.fixedCosts.map(i => i.id));
+  const actualVariable = getTransactionTotal(data.variableCosts.map(i => i.id));
+  const actualSavings = getTransactionTotal(data.savings.map(i => i.id));
+  
+  // Gesamtbeträge: Geplant ODER Tatsächlich (je nachdem was höher)
+  const totIncome = Math.max(plannedIncome, actualIncome);
+  const totFixed = Math.max(plannedFixed, actualFixed);
+  const totVariable = Math.max(plannedVariable, actualVariable);
+  const totSavings = Math.max(plannedSavings, actualSavings);
   
   // NEU: Nicht zugeordnete Einnahmen aus CSV
   const unassignedIncome = (data.bankTransactions || [])
