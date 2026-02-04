@@ -1265,6 +1265,22 @@ export default function App() {
     setShowDataMenu(false);
   };
 
+  // NEU: Nur CSV-Import zurücksetzen
+  const clearTransactions = () => {
+    if (confirm('CSV-Import zurücksetzen? Transaktionen werden gelöscht, Budgets bleiben erhalten.')) {
+      setAllData(prev => ({
+        ...prev,
+        [currentMonth]: {
+          ...prev[currentMonth],
+          bankTransactions: [],
+          transactions: {}
+        }
+      }));
+      alert('CSV-Import wurde zurückgesetzt.');
+    }
+    setShowDataMenu(false);
+  };
+
   const getData = () => {
     const existing = allData[currentMonth];
     if (!existing) {
@@ -1855,6 +1871,9 @@ export default function App() {
                   <Upload size={16} color="#8B7355" /> Backup laden
                   <input type="file" accept=".json" onChange={importBackup} style={{ display: 'none' }} />
                 </label>
+                <button onClick={clearTransactions} style={{ width: '100%', padding: '12px 16px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, color: '#D97706', fontSize: 14, borderTop: '1px solid #E8E4DC' }}>
+                  <X size={16} /> CSV-Import zurücksetzen
+                </button>
                 <button onClick={clearAllData} style={{ width: '100%', padding: '12px 16px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, color: '#A0522D', fontSize: 14, borderTop: '1px solid #E8E4DC' }}>
                   <Trash2 size={16} /> Alle Daten löschen
                 </button>
