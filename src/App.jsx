@@ -184,7 +184,8 @@ const createMonthData = (withExampleData = false) => ({
     { id: 'v4', name: 'Gesundheit', amount: withExampleData ? 30 : 0, icon: 'Heart' },
     { id: 'v5', name: 'Kleidung', amount: withExampleData ? 40 : 0, icon: 'Shirt' },
     { id: 'v6', name: 'Hund', amount: withExampleData ? 60 : 0, icon: 'Dog' },
-    { id: 'v7', name: 'Sonstiges', amount: withExampleData ? 40 : 0, icon: 'MoreHorizontal' }
+    { id: 'v7', name: 'Bargeld', amount: withExampleData ? 50 : 0, icon: 'Banknote' },
+    { id: 'v8', name: 'Sonstiges', amount: withExampleData ? 40 : 0, icon: 'MoreHorizontal' }
   ],
   savings: [
     { id: 's1', name: 'Notgroschen', amount: withExampleData ? 50 : 0, icon: 'PiggyBank', target: withExampleData ? 3000 : 0, saved: withExampleData ? 800 : 0 },
@@ -192,8 +193,8 @@ const createMonthData = (withExampleData = false) => ({
     { id: 's3', name: 'Hund', amount: withExampleData ? 30 : 0, icon: 'Dog', target: withExampleData ? 500 : 0, saved: withExampleData ? 150 : 0 }
   ],
   rollover: 0,
-  weekly: withExampleData ? { v1: { w1: 70, w2: 80, w3: 75, w4: 65 }, v2: { w1: 20, w2: 15, w3: 25, w4: 15 } } : {},
-  bankTransactions: [] // NEU: Importierte Bank-Transaktionen
+  transactions: {}, // NEU: Transaktionen pro Kategorie { categoryId: [{ id, date, description, amount }] }
+  bankTransactions: [] // Importierte Bank-Transaktionen
 });
 
 const Modal = ({ open, onClose, title, children }) => {
@@ -338,6 +339,81 @@ const EditModal = ({ open, onClose, item, onSave, type }) => {
       <div style={{ display: 'flex', gap: 12, padding: '16px 20px', borderTop: '1px solid #E8E4DC' }}>
         <button onClick={onClose} style={{ flex: 1, padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', cursor: 'pointer', fontWeight: 500, color: '#5C4033' }}>Abbrechen</button>
         <button onClick={handleSave} style={{ flex: 1, padding: 12, border: 'none', borderRadius: 8, background: '#8B7355', color: '#FFFEF9', cursor: 'pointer', fontWeight: 500 }}>Speichern</button>
+      </div>
+    </Modal>
+  );
+};
+
+// NEU: Transaction Modal zum Hinzufügen/Bearbeiten von Transaktionen
+const TransactionModal = ({ open, onClose, transaction, onSave }) => {
+  const [date, setDate] = useState('');
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+
+  React.useEffect(() => {
+    if (open && transaction) {
+      setDate(transaction.date || '');
+      setDescription(transaction.description || '');
+      setAmount(transaction.amount?.toString() || '');
+    } else if (open) {
+      // Neuer Eintrag: Heutiges Datum vorausfüllen
+      const today = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      setDate(today);
+      setDescription('');
+      setAmount('');
+    }
+  }, [open, transaction]);
+
+  const handleSave = () => {
+    if (!description.trim() || !amount) return;
+    onSave({
+      ...(transaction || {}),
+      id: transaction?.id || `t${Date.now()}`,
+      date: date || new Date().toLocaleDateString('de-DE'),
+      description: description.trim(),
+      amount: parseFloat(amount) || 0
+    });
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={transaction ? "Transaktion bearbeiten" : "Transaktion hinzufügen"}>
+      <div style={{ padding: 20 }}>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Datum</label>
+          <input 
+            type="text" 
+            value={date} 
+            onChange={e => setDate(e.target.value)}
+            placeholder="TT.MM.JJJJ"
+            style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, boxSizing: 'border-box', background: '#FFFEF9' }} 
+          />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Beschreibung</label>
+          <input 
+            value={description} 
+            onChange={e => setDescription(e.target.value)}
+            autoFocus
+            placeholder="z.B. BILLA Einkauf"
+            style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, boxSizing: 'border-box', background: '#FFFEF9' }} 
+          />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 6, color: '#5C4033' }}>Betrag (€)</label>
+          <input 
+            type="number" 
+            value={amount} 
+            onChange={e => setAmount(e.target.value)}
+            placeholder="0.00"
+            step="0.01"
+            style={{ width: '100%', padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, fontSize: 16, boxSizing: 'border-box', background: '#FFFEF9' }} 
+          />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 12, padding: '16px 20px', borderTop: '1px solid #E8E4DC' }}>
+        <button onClick={onClose} style={{ flex: 1, padding: 12, border: '1px solid #E8E4DC', borderRadius: 8, background: '#FFFEF9', cursor: 'pointer', fontWeight: 500, color: '#5C4033' }}>Abbrechen</button>
+        <button onClick={handleSave} disabled={!description.trim() || !amount} style={{ flex: 1, padding: 12, border: 'none', borderRadius: 8, background: '#8B7355', color: '#FFFEF9', cursor: 'pointer', fontWeight: 500, opacity: (description.trim() && amount) ? 1 : 0.5 }}>Speichern</button>
       </div>
     </Modal>
   );
@@ -515,7 +591,7 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCa
           amount: Math.abs(amount),
           isExpense: amount < 0,
           category: category || null,
-          categoryType: categoryType || 'variableCosts',
+          categoryType: categoryType || (amount < 0 ? 'variableCosts' : 'income'), // Einnahmen oder Ausgaben
           purpose,
           selected: true
         });
@@ -661,6 +737,7 @@ const BankImportModal = ({ open, onClose, onImport, data, categoryRules, onAddCa
                             background: '#FFFEF9'
                           }}
                         >
+                          <option value="income">Einnahmen</option>
                           <option value="fixedCosts">Fixkosten</option>
                           <option value="variableCosts">Variable Kosten</option>
                         </select>
@@ -767,12 +844,76 @@ const ProgressBar = ({ value, color = '#8B7355' }) => (
   </div>
 );
 
-const VariableItem = ({ item, weekly, onEdit, onDelete, onUpdateWeekly, actualAmount, showComparison }) => {
+const IncomeItem = ({ item, transactions = [], onEdit, onDelete, onAddTransaction, onEditTransaction, onDeleteTransaction }) => {
   const [isOpen, setIsOpen] = useState(false);
   const Icon = iconMap[item.icon] || MoreHorizontal;
-  const weeklyBudget = item.amount / 4;
-  const w = weekly || {};
-  const spent = (w.w1 || 0) + (w.w2 || 0) + (w.w3 || 0) + (w.w4 || 0);
+  const total = transactions.reduce((sum, t) => sum + t.amount, 0);
+
+  return (
+    <div style={{ borderBottom: '1px solid #E8E4DC' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', gap: 12, cursor: 'pointer' }} onClick={() => setIsOpen(!isOpen)}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: '#FAF8F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={20} color="#8B7355" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 500, color: '#5C4033' }}>{item.name}</div>
+          <div style={{ fontSize: 13, color: '#8B8589' }}>
+            {formatCurrency(total)}
+            {transactions.length > 0 && <span style={{ marginLeft: 8, color: '#8B8589' }}>({transactions.length} Transaktionen)</span>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{ padding: 8, border: 'none', background: 'transparent', cursor: 'pointer' }}><Edit3 size={16} color="#8B8589" /></button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} style={{ padding: 8, border: 'none', background: 'transparent', cursor: 'pointer' }}><Trash2 size={16} color="#8B8589" /></button>
+          {isOpen ? <ChevronUp size={20} color="#8B8589" /> : <ChevronDown size={20} color="#8B8589" />}
+        </div>
+      </div>
+      {isOpen && (
+        <div style={{ padding: '0 20px 16px', background: '#FAF8F5' }}>
+          <div style={{ fontSize: 12, color: '#8B8589', marginBottom: 12, fontWeight: 500, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>TRANSAKTIONEN</span>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onAddTransaction(item.id); }}
+              style={{ padding: '4px 8px', border: '1px solid #8B7355', borderRadius: 6, background: '#FFFEF9', cursor: 'pointer', fontSize: 11, color: '#8B7355', display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <Plus size={12} /> Hinzufügen
+            </button>
+          </div>
+          
+          {transactions.length === 0 ? (
+            <div style={{ padding: 20, textAlign: 'center', color: '#8B8589', fontSize: 13 }}>
+              Keine Transaktionen. Klicke "+ Hinzufügen" oder importiere CSV.
+            </div>
+          ) : (
+            <div>
+              {transactions.map((t) => (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #E8E4DC' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: '#5C4033', fontWeight: 500 }}>{t.description}</div>
+                    {t.date && <div style={{ fontSize: 11, color: '#8B8589' }}>{t.date}</div>}
+                  </div>
+                  <div style={{ fontWeight: 600, color: '#6B8E23', marginRight: 8 }}>+{formatCurrency(t.amount)}</div>
+                  <button onClick={(e) => { e.stopPropagation(); onEditTransaction(t); }} style={{ padding: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}><Edit3 size={14} color="#8B8589" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); onDeleteTransaction(t.id); }} style={{ padding: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}><Trash2 size={14} color="#8B8589" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div style={{ paddingTop: 12, borderTop: '1px solid #E8E4DC', marginTop: 8 }}>
+            <span style={{ color: '#8B8589' }}>Gesamt: </span>
+            <span style={{ fontWeight: 600, color: '#6B8E23' }}>+{formatCurrency(total)}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const VariableItem = ({ item, transactions = [], onEdit, onDelete, onAddTransaction, onEditTransaction, onDeleteTransaction, actualAmount, showComparison }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const Icon = iconMap[item.icon] || MoreHorizontal;
+  const spent = transactions.reduce((sum, t) => sum + t.amount, 0);
   const rest = item.amount - spent;
   const diff = showComparison ? item.amount - (actualAmount || 0) : 0;
 
@@ -784,7 +925,10 @@ const VariableItem = ({ item, weekly, onEdit, onDelete, onUpdateWeekly, actualAm
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 500, color: '#5C4033' }}>{item.name}</div>
-          <div style={{ fontSize: 13, color: '#8B8589' }}>{formatCurrency(item.amount)}/Monat</div>
+          <div style={{ fontSize: 13, color: '#8B8589' }}>
+            {formatCurrency(spent)} / {formatCurrency(item.amount)}
+            {transactions.length > 0 && <span style={{ marginLeft: 8, color: '#8B8589' }}>({transactions.length} Transaktionen)</span>}
+          </div>
           {showComparison && actualAmount !== undefined && (
             <div style={{ fontSize: 12, marginTop: 4 }}>
               <div style={{ color: '#8B8589' }}>
@@ -804,17 +948,36 @@ const VariableItem = ({ item, weekly, onEdit, onDelete, onUpdateWeekly, actualAm
       </div>
       {isOpen && (
         <div style={{ padding: '0 20px 16px', background: '#FAF8F5' }}>
-          <div style={{ fontSize: 12, color: '#8B8589', marginBottom: 12, fontWeight: 500 }}>WOCHENBUDGET (je {formatCurrency(weeklyBudget)})</div>
-          {weeks.map((wk) => (
-            <div key={wk.key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-              <div style={{ width: 70 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#5C4033' }}>{wk.label}</div>
-                <div style={{ fontSize: 11, color: '#8B8589' }}>{wk.range}</div>
-              </div>
-              <input type="number" value={w[wk.key] || ''} onChange={(e) => onUpdateWeekly(item.id, wk.key, parseFloat(e.target.value) || 0)} onClick={(e) => e.stopPropagation()} style={{ width: 80, padding: '8px 10px', border: '1px solid #E8E4DC', borderRadius: 6, fontSize: 14 }} placeholder="0" />
-              <div style={{ flex: 1 }}><ProgressBar value={weeklyBudget > 0 ? (w[wk.key] || 0) / weeklyBudget : 0} color="#C3B091" /></div>
+          <div style={{ fontSize: 12, color: '#8B8589', marginBottom: 12, fontWeight: 500, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>TRANSAKTIONEN</span>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onAddTransaction(item.id); }}
+              style={{ padding: '4px 8px', border: '1px solid #8B7355', borderRadius: 6, background: '#FFFEF9', cursor: 'pointer', fontSize: 11, color: '#8B7355', display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <Plus size={12} /> Hinzufügen
+            </button>
+          </div>
+          
+          {transactions.length === 0 ? (
+            <div style={{ padding: 20, textAlign: 'center', color: '#8B8589', fontSize: 13 }}>
+              Keine Transaktionen. Klicke "+ Hinzufügen" oder importiere CSV.
             </div>
-          ))}
+          ) : (
+            <div>
+              {transactions.map((t) => (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #E8E4DC' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: '#5C4033', fontWeight: 500 }}>{t.description}</div>
+                    {t.date && <div style={{ fontSize: 11, color: '#8B8589' }}>{t.date}</div>}
+                  </div>
+                  <div style={{ fontWeight: 600, color: '#5C4033', marginRight: 8 }}>{formatCurrency(t.amount)}</div>
+                  <button onClick={(e) => { e.stopPropagation(); onEditTransaction(t); }} style={{ padding: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}><Edit3 size={14} color="#8B8589" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); onDeleteTransaction(t.id); }} style={{ padding: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}><Trash2 size={14} color="#8B8589" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+          
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, borderTop: '1px solid #E8E4DC', marginTop: 8 }}>
             <span style={{ color: '#8B8589' }}>Ausgegeben: {formatCurrency(spent)}</span>
             <span style={{ fontWeight: 600, color: rest >= 0 ? '#6B8E23' : '#A0522D' }}>{rest >= 0 ? `Rest: ${formatCurrency(rest)}` : `Über: ${formatCurrency(Math.abs(rest))}`}</span>
@@ -926,6 +1089,7 @@ export default function App() {
   const [showBankImport, setShowBankImport] = useState(false); // NEU
   const [viewMode, setViewMode] = useState('budget'); // NEU: 'budget' oder 'comparison'
   const [learningRules, setLearningRules] = useState(initialData.learningRules); // NEU: Auto-Learning
+  const [transactionModal, setTransactionModal] = useState({ open: false, transaction: null, categoryId: null }); // NEU
   const year = currentMonth.split('-')[0];
 
   // Speichere Daten automatisch bei Änderungen
@@ -1072,7 +1236,13 @@ export default function App() {
   const totFixed = data.fixedCosts.reduce((s, i) => s + i.amount, 0);
   const totVariable = data.variableCosts.reduce((s, i) => s + i.amount, 0);
   const totSavings = data.savings.reduce((s, i) => s + i.amount, 0);
-  const budget = totIncome + (data.rollover || 0);
+  
+  // NEU: Nicht zugeordnete Einnahmen aus CSV
+  const unassignedIncome = (data.bankTransactions || [])
+    .filter(t => !t.category && !t.isExpense)
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const budget = totIncome + unassignedIncome + (data.rollover || 0);
   
   // NEU: Zusätzliche Ausgaben aus nicht zugeordneten Transaktionen
   const unassignedExpenses = (data.bankTransactions || [])
@@ -1182,8 +1352,66 @@ export default function App() {
     return total;
   };
 
-  const updateWeekly = (itemId, weekKey, value) => {
-    setAllData(prev => ({ ...prev, [currentMonth]: { ...prev[currentMonth], weekly: { ...prev[currentMonth].weekly, [itemId]: { ...(prev[currentMonth].weekly?.[itemId] || {}), [weekKey]: value } } } }));
+  // NEU: Transaction Management
+  const addTransaction = (categoryId) => {
+    setTransactionModal({ open: true, transaction: null, categoryId });
+  };
+
+  const editTransaction = (transaction) => {
+    setTransactionModal({ open: true, transaction, categoryId: null });
+  };
+
+  const saveTransaction = (transaction) => {
+    setAllData(prev => {
+      const currentData = prev[currentMonth];
+      const transactions = currentData.transactions || {};
+      const categoryId = transactionModal.categoryId || transaction.categoryId;
+      
+      const categoryTransactions = transactions[categoryId] || [];
+      const existingIndex = categoryTransactions.findIndex(t => t.id === transaction.id);
+      
+      let updatedTransactions;
+      if (existingIndex >= 0) {
+        // Update existing
+        updatedTransactions = categoryTransactions.map((t, i) => i === existingIndex ? transaction : t);
+      } else {
+        // Add new
+        updatedTransactions = [...categoryTransactions, { ...transaction, categoryId }];
+      }
+      
+      return {
+        ...prev,
+        [currentMonth]: {
+          ...currentData,
+          transactions: {
+            ...transactions,
+            [categoryId]: updatedTransactions
+          }
+        }
+      };
+    });
+  };
+
+  const deleteTransaction = (transactionId) => {
+    if (!confirm('Transaktion löschen?')) return;
+    setAllData(prev => {
+      const currentData = prev[currentMonth];
+      const transactions = currentData.transactions || {};
+      
+      // Find and remove transaction from its category
+      const updatedTransactions = {};
+      Object.keys(transactions).forEach(catId => {
+        updatedTransactions[catId] = transactions[catId].filter(t => t.id !== transactionId);
+      });
+      
+      return {
+        ...prev,
+        [currentMonth]: {
+          ...currentData,
+          transactions: updatedTransactions
+        }
+      };
+    });
   };
 
   // NEU: Bank-Import Funktion
@@ -1225,21 +1453,19 @@ export default function App() {
         );
       });
       
-      // Aktualisiere weekly budgets basierend auf Transaktionsdatum
-      const updatedWeekly = { ...currentData.weekly };
+      // Aktualisiere Transaktionslisten für alle zugeordneten Transaktionen (Einnahmen + Ausgaben)
+      const updatedTransactions = { ...(currentData.transactions || {}) };
       newTransactions.forEach(t => {
-        if (t.category && t.isExpense) {
-          const weekKey = getWeekNumber(t.date);
-          if (updatedWeekly[t.category.id]) {
-            updatedWeekly[t.category.id] = {
-              ...updatedWeekly[t.category.id],
-              [weekKey]: (updatedWeekly[t.category.id][weekKey] || 0) + t.amount
-            };
-          } else {
-            updatedWeekly[t.category.id] = {
-              [weekKey]: t.amount
-            };
-          }
+        if (t.category) {
+          const catId = t.category.id;
+          const catTransactions = updatedTransactions[catId] || [];
+          updatedTransactions[catId] = [...catTransactions, {
+            id: t.id,
+            date: t.date,
+            description: t.description,
+            amount: t.amount,
+            categoryId: catId
+          }];
         }
       });
       
@@ -1248,7 +1474,7 @@ export default function App() {
         [currentMonth]: {
           ...currentData,
           bankTransactions: [...existing, ...newTransactions],
-          weekly: updatedWeekly
+          transactions: updatedTransactions
         }
       };
     });
@@ -1602,7 +1828,21 @@ export default function App() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Section title="Einnahmen" total={totIncome + (data.rollover || 0)} color="#D2B48C" icon={TrendingUp} onAdd={() => addItem('income', 'income')}>
-            {data.income.map(item => <SimpleItem key={item.id} item={item} onEdit={(i) => setEditModal({ open: true, item: i, type: 'income', category: 'income' })} onDelete={(id) => deleteItem(id, 'income')} />)}
+            {data.income.map(item => {
+              const itemTransactions = (data.transactions && data.transactions[item.id]) || [];
+              return (
+                <IncomeItem 
+                  key={item.id} 
+                  item={item}
+                  transactions={itemTransactions}
+                  onEdit={(i) => setEditModal({ open: true, item: i, type: 'income', category: 'income' })} 
+                  onDelete={(id) => deleteItem(id, 'income')}
+                  onAddTransaction={(catId) => addTransaction(catId)}
+                  onEditTransaction={(t) => editTransaction(t)}
+                  onDeleteTransaction={(tId) => deleteTransaction(tId)}
+                />
+              );
+            })}
             {data.rollover !== 0 && (
               <div style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', gap: 12, borderBottom: '1px solid #E8E4DC', background: data.rollover > 0 ? '#F5F5DC' : '#FAF0E6' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: data.rollover > 0 ? '#E8E4DC' : '#F0E0D0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1615,6 +1855,20 @@ export default function App() {
                 </div>
                 <div style={{ fontWeight: 600, color: data.rollover > 0 ? '#6B8E23' : '#A0522D' }}>
                   {data.rollover > 0 ? '+' : ''}{formatCurrency(data.rollover)}
+                </div>
+              </div>
+            )}
+            {unassignedIncome > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', gap: 12, borderBottom: '1px solid #E8E4DC', background: '#E6F7E6' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#C8E6C8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertCircle size={20} color="#2D7016" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 500, color: '#2D7016' }}>Sonstige Einnahmen</div>
+                  <div style={{ fontSize: 12, color: '#4A9A2D', marginTop: 2 }}>Nicht zugeordnete Transaktionen</div>
+                </div>
+                <div style={{ fontWeight: 600, color: '#2D7016' }}>
+                  +{formatCurrency(unassignedIncome)}
                 </div>
               </div>
             )}
@@ -1636,14 +1890,17 @@ export default function App() {
           <Section title="Variable Kosten" total={totVariable} color="#C3B091" icon={ShoppingCart} onAdd={() => addItem('variableCosts', 'variable')}>
             {data.variableCosts.map(item => {
               const actualAmount = viewMode === 'comparison' ? getActualExpenses('variableCosts', item.id) : undefined;
+              const itemTransactions = (data.transactions && data.transactions[item.id]) || [];
               return (
                 <VariableItem 
                   key={item.id} 
                   item={item} 
-                  weekly={data.weekly?.[item.id]} 
+                  transactions={itemTransactions}
                   onEdit={(i) => setEditModal({ open: true, item: i, type: 'variable', category: 'variableCosts' })} 
-                  onDelete={(id) => deleteItem(id, 'variableCosts')} 
-                  onUpdateWeekly={updateWeekly}
+                  onDelete={(id) => deleteItem(id, 'variableCosts')}
+                  onAddTransaction={(catId) => addTransaction(catId)}
+                  onEditTransaction={(t) => editTransaction(t)}
+                  onDeleteTransaction={(tId) => deleteTransaction(tId)}
                   actualAmount={actualAmount}
                   showComparison={viewMode === 'comparison'}
                 />
@@ -1734,6 +1991,12 @@ export default function App() {
       </main>
 
       <EditModal open={editModal.open} item={editModal.item} type={editModal.type} onClose={() => setEditModal({ open: false, item: null, type: '', category: '' })} onSave={(item) => saveItem(item, editModal.category)} />
+      <TransactionModal 
+        open={transactionModal.open} 
+        transaction={transactionModal.transaction}
+        onClose={() => setTransactionModal({ open: false, transaction: null, categoryId: null })}
+        onSave={saveTransaction}
+      />
       <BankImportModal 
         open={showBankImport} 
         onClose={() => setShowBankImport(false)} 
