@@ -1073,7 +1073,13 @@ export default function App() {
   const totVariable = data.variableCosts.reduce((s, i) => s + i.amount, 0);
   const totSavings = data.savings.reduce((s, i) => s + i.amount, 0);
   const budget = totIncome + (data.rollover || 0);
-  const totExpenses = totFixed + totVariable + totSavings;
+  
+  // NEU: Zusätzliche Ausgaben aus nicht zugeordneten Transaktionen
+  const unassignedExpenses = (data.bankTransactions || [])
+    .filter(t => !t.category && t.isExpense)
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const totExpenses = totFixed + totVariable + totSavings + unassignedExpenses;
   const available = budget - totExpenses;
 
   // NEU: Berechne tatsächliche Ausgaben aus Bank-Transaktionen
@@ -1210,7 +1216,7 @@ export default function App() {
       const currentData = prev[currentMonth];
       const existing = currentData.bankTransactions || [];
       
-      // Duplikaterkennung
+      // Duplikaterkennung - ALLE Transaktionen (auch ohne Kategorie)
       const newTransactions = transactions.filter(newT => {
         return !existing.some(existT => 
           existT.date === newT.date && 
@@ -1246,6 +1252,9 @@ export default function App() {
         }
       };
     });
+    
+    // Automatisch in Vergleichsansicht wechseln
+    setViewMode('comparison');
   };
 
   const transferToNextMonth = () => {
@@ -1259,7 +1268,13 @@ export default function App() {
     const variable = currentData.variableCosts?.reduce((s, i) => s + i.amount, 0) || 0;
     const savings = currentData.savings?.reduce((s, i) => s + i.amount, 0) || 0;
     const rollover = currentData.rollover || 0;
-    const availableToTransfer = income + rollover - fixed - variable - savings;
+    
+    // NEU: Zusätzliche Ausgaben aus nicht zugeordneten Transaktionen
+    const unassignedExpenses = (currentData.bankTransactions || [])
+      .filter(t => !t.category && t.isExpense)
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const availableToTransfer = income + rollover - fixed - variable - savings - unassignedExpenses;
     
     setAllData(prev => {
       const existingData = prev[nextKey];
@@ -1636,6 +1651,27 @@ export default function App() {
             })}
           </Section>
 
+          {/* NEU: Nicht zugeordnete Ausgaben anzeigen */}
+          {unassignedExpenses > 0 && (
+            <div style={{ background: '#FFF5E6', borderRadius: 16, border: '1px solid #FFD699', padding: 16, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <AlertCircle size={20} color="#D97706" />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, color: '#92400E' }}>Sonstige Ausgaben</div>
+                  <div style={{ fontSize: 12, color: '#B45309', marginTop: 2 }}>
+                    Nicht zugeordnete Transaktionen aus CSV-Import
+                  </div>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 18, color: '#D97706' }}>
+                  {formatCurrency(unassignedExpenses)}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: '#B45309', fontStyle: 'italic' }}>
+                💡 Tipp: Importiere CSV erneut und ordne Transaktionen Kategorien zu
+              </div>
+            </div>
+          )}
+
           <Section title="Rücklagen" total={totSavings} color="#8B8589" icon={PiggyBank} onAdd={() => addItem('savings', 'savings')}>
             {data.savings.map(item => {
               const autoSaved = calculateSaved(item.id);
@@ -1651,9 +1687,10 @@ export default function App() {
               { label: 'Fixkosten', value: totFixed, color: '#8B7355' },
               { label: 'Variable Kosten', value: totVariable, color: '#C3B091' },
               { label: 'Rücklagen', value: totSavings, color: '#8B8589' },
+              ...(unassignedExpenses > 0 ? [{ label: 'Sonstige', value: unassignedExpenses, color: '#D97706' }] : []),
               { label: 'Verfügbar', value: Math.max(0, available), color: '#6B8E23' }
             ].map((item, i) => {
-              const total = totFixed + totVariable + totSavings + Math.max(0, available);
+              const total = totFixed + totVariable + totSavings + unassignedExpenses + Math.max(0, available);
               const pct = total > 0 ? item.value / total : 0;
               return (
                 <div key={i} style={{ marginBottom: 12 }}>
