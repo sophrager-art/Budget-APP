@@ -215,15 +215,15 @@ const Modal = ({ open, onClose, title, children }) => {
 // Verfügbare Icons für Auswahl - wird jetzt durch iconCategories ersetzt
 
 const EditModal = ({ open, onClose, item, onSave, type }) => {
-  const [name, setName] = React.useState('');
-  const [amount, setAmount] = React.useState('');
-  const [target, setTarget] = React.useState('');
-  const [saved, setSaved] = React.useState('');
-  const [desc, setDesc] = React.useState('');
-  const [icon, setIcon] = React.useState('MoreHorizontal');
-  const [showIconPicker, setShowIconPicker] = React.useState(false);
+  const [name, setName] = useState('');
+  const [amount, setAmount] = useState('');
+  const [target, setTarget] = useState('');
+  const [saved, setSaved] = useState('');
+  const [desc, setDesc] = useState('');
+  const [icon, setIcon] = useState('MoreHorizontal');
+  const [showIconPicker, setShowIconPicker] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && item) {
       setName(item.name || '');
       setAmount(item.amount?.toString() || '0');
@@ -352,7 +352,7 @@ const TransactionModal = ({ open, onClose, transaction, onSave, data, allowCateg
   const [categoryType, setCategoryType] = useState('variableCosts');
   const [categoryId, setCategoryId] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && transaction) {
       setDate(transaction.date || '');
       setDescription(transaction.description || '');
